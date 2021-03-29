@@ -68,7 +68,7 @@ ComputeProgram::ComputeProgram(const char* computePath)
     // use the program
     glUseProgram(id);
 
-    glUniform1i(glGetUniformLocation(id, "destTex"), 0);
+    glUniform1i(glGetUniformLocation(id, "imgOutput"), 0);
 
 }
 

@@ -17,11 +17,11 @@
 int main()
 {
 
-    Renderer RnDr(2048, 2048);
+    Renderer RnDr(128, 128);
 
     try
     {    
-        RnDr.RenderLoop();
+        RnDr.OneTimeRender();
     }
     catch(const std::exception& e)
     {

@@ -17,6 +17,9 @@
 #include <ComputeProgram.h>
 #include <RenderProgram.h>
 
+#include <stb_image.h>
+#include <stb_image_write.h>
+
 
 
 
@@ -71,6 +74,13 @@ private:
     void InitializeShaderPrograms();
 
 
+    void GetMaximumWorkGroupCount();
+
+    void GetMaximumWorkGroupSize();
+
+    uint8_t* FloatToUint8(float* pixels);
+
+
 
 
 public:
@@ -81,6 +91,8 @@ public:
     ~Renderer();
 
     void RenderLoop();
+
+    void OneTimeRender();    
 
     static void InitializeGL(int height, int width);
 

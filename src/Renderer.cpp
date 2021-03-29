@@ -122,6 +122,9 @@ Renderer::Renderer(unsigned int initialWidth, unsigned int initialHeight)
     // read load compile and link shader programs
     InitializeShaderPrograms();
 
+    GetMaximumWorkGroupCount();
+
+    GetMaximumWorkGroupSize();
 
 }
 
@@ -157,6 +160,8 @@ void Renderer::RenderLoop()
         // check and call events and callback functions
         // if we have defined them
         glfwPollEvents();
+
+        glfwSwapBuffers(_window);        
     }
 
     glDeleteProgram(_computeProgram->id);
@@ -165,15 +170,39 @@ void Renderer::RenderLoop()
     glfwTerminate();
 }
 
+void Renderer::GetMaximumWorkGroupCount()
+{
+    int work_group_count[3];
+
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_group_count[0]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_group_count[1]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_group_count[2]);
+
+    std::cout << "work group counts x: " << work_group_count[0] << " y: " << work_group_count[1] << " z: " << work_group_count[2] << '\n';
+}
+
+void Renderer::GetMaximumWorkGroupSize()
+{
+    int work_group_size[3];
+
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_group_size[0]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_group_size[1]);
+    glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_group_size[2]);
+
+    std::cout << "work group size x: " << work_group_size[0] << " y: " << work_group_size[1] << " z: " << work_group_size[2] << '\n';
+}
+
 void Renderer::GenerateTexture()
 {
     glGenTextures(1, &_textureHandle);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _textureHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, _width, _height, 0, GL_RGBA, GL_FLOAT, 0);    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);  
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, _width, _height, 0, GL_RGBA, GL_FLOAT, 0);
 
     // in order to write to this texture we bind it to an image unit
     glBindImageTexture(0, _textureHandle, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
@@ -182,21 +211,72 @@ void Renderer::GenerateTexture()
 void Renderer::UpdateTexture(float frame)
 {
 
-    glUseProgram(_computeProgram->id);
-	glUniform1f(glGetUniformLocation(_computeProgram->id, "roll"), frame);    
+    glActiveTexture(GL_TEXTURE0);
+    glUseProgram(_computeProgram->id);  
     //_computeProgram->SetFloat("roll", (float)frame*0.01f);
 
     // _width * _height threads in blocks of 16^2
-    glDispatchCompute(_width/16, _height/16, 1);
-    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    glDispatchCompute(_width, _height, 1);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     
 }
 
 void Renderer::DrawImage()
 {
+    glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(_renderProgram->id);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glfwSwapBuffers(_window);
+}
+
+uint8_t* Renderer::FloatToUint8(float* pixels)
+{
+    // we will omit alpha channel
+    uint8_t* result = new uint8_t[_width * _height * 3];
+
+    int indexSrc = 0;
+    int indexDst = 0;
+    for(int j=_height - 1; j>=0; j--)
+    {
+        for(int i=0; i<_width; i++)
+        {
+            float r = pixels[indexSrc++];
+            float g = pixels[indexSrc++];
+            float b = pixels[indexSrc++];
+            indexSrc++;
+
+            int ir = int(255.99 * r);
+            int ig = int(255.99 * g);
+            int ib = int(255.99 * b);
+
+            result[indexDst++] = ir;
+            result[indexDst++] = ig;
+            result[indexDst++] = ib;
+        }
+    }
+
+    return result;
+}
+
+void Renderer::OneTimeRender()
+{
+    UpdateTexture(1);
+    DrawImage();
+
+    // FBO
+    GLuint fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _textureHandle, 0);
+
+    float* pixels = (float *)malloc(_width*_height* 4 * sizeof(float));
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glReadPixels(0, 0, _width, _height, GL_RGBA, GL_FLOAT, pixels);
+
+    std::cout << pixels[0] << " " << pixels[1] << " " << pixels[2] << " " << pixels[3] << '\n';
+
+    uint8_t* result = FloatToUint8(pixels);
+
+    stbi_write_png("test.png",_width, _height, 3, result, _width * 3);
 }
 
 Renderer::~Renderer()
