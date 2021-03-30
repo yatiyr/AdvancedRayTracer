@@ -1,6 +1,6 @@
 #include <Renderer.h>
 
-
+#include <vector>
 
 void Renderer::Framebuffer_Size_Callback(GLFWwindow* window, int width, int height)
 {
@@ -141,6 +141,7 @@ void Renderer::InitializeShaderPrograms()
 
 void Renderer::RenderLoop()
 {
+
     while(!glfwWindowShouldClose(_window))
     {
 
@@ -259,6 +260,19 @@ uint8_t* Renderer::FloatToUint8(float* pixels)
 
 void Renderer::OneTimeRender()
 {
+
+    /*
+    std::vector<float> eren = {1.0f, 0.0f, 0.5f, 0.5f};
+
+    GLuint ssbo;
+    glGenBuffers(1, &ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, eren.size() * sizeof(float), eren.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    */
+
     UpdateTexture(1);
     DrawImage();
 

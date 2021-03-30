@@ -45,10 +45,13 @@ include_directories(
 # STB_IMAGE
 add_library(STB_IMAGE "${CMAKE_SOURCE_DIR}/thirdparty/stb_image.cpp")
 
+# tinyxml2
+add_library(TINY_XML2 "${CMAKE_SOURCE_DIR}/thirdparty/tinyxml2.cpp")
+
 # GLAD
 add_library(GLAD "${CMAKE_SOURCE_DIR}/thirdparty/glad.c")
 
-set(LIBS glfw3 GL GLU X11 pthread  Xrandr Xi dl assimp STB_IMAGE GLAD)
+set(LIBS glfw3 GL GLU X11 pthread  Xrandr Xi dl assimp STB_IMAGE TINY_XML2 GLAD)
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
