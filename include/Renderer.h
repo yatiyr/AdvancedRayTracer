@@ -20,13 +20,15 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 
-
+#include <SceneManager.h>
 
 
 // Base renderer class
 class Renderer
 {
 private:
+
+    SceneManager _sceneManager;
 
     // store glfw window pointer here
     GLFWwindow* _window;

@@ -87,6 +87,8 @@ Renderer::Renderer(unsigned int initialWidth, unsigned int initialHeight)
     _width  = initialWidth;
     _height = initialHeight;
 
+    _sceneManager.AddScene(std::string(ROOT_DIR) + "assets/scenes/simple.xml");
+
     InitializeGL(_width, _height);
 
 
