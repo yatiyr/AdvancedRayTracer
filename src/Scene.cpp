@@ -90,7 +90,11 @@ Scene::Scene(const std::string& filepath)
         stream >> camera.nearPlane.x >> camera.nearPlane.y >> camera.nearPlane.z >> camera.nearPlane.w;
         stream >> camera.nearDistance;
         stream >> camera.imageResolution.x >> camera.imageResolution.y;
-        stream >> camera.imageName;
+
+        std::string imageName;
+        stream >> imageName;
+        imageNames.push_back(_imageName);
+
 
         _cameras.push_back(camera);
         element = element->NextSiblingElement("Camera");
@@ -224,6 +228,8 @@ Scene::Scene(const std::string& filepath)
         element = element->NextSiblingElement("Sphere");
     }
 
+    _activeCamera = _cameras[0];
+
 }
 
 Scene::~Scene()
@@ -234,5 +240,103 @@ Scene::~Scene()
 
 void Scene::BindObjectsToGPU()
 {
+
+    // Bind point light array
+    glGenBuffers(1, &ssbo_pointLights);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_pointLights);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _pointLights.size() * sizeof(PointLight), _pointLights.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo_pointLights);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    
+    // Bind materials array
+    glGenBuffers(1, &ssbo_materials);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_materials);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _materials.size() * sizeof(Material), _materials.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo_materials);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // Bind vertexData array
+    glGenBuffers(1, &ssbo_vertexData);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_vertexData);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _vertexData.size() * sizeof(Vertex), _vertexData.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, ssbo_vertexData);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); 
+
+    // Bind meshes array
+    glGenBuffers(1, &ssbo_meshes);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_meshes);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _meshes.size() * sizeof(Mesh), _meshes.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ssbo_meshes);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // Bind triangles array
+    glGenBuffers(1, &ssbo_triangles);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_triangles);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _triangles.size() * sizeof(Triangle), _triangles.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo_triangles);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+
+    // Bind spheres array
+    glGenBuffers(1, &ssbo_spheres);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_spheres);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _spheres.size() * sizeof(Sphere), _spheres.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, ssbo_spheres);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // Bind cameras array   
+    glGenBuffers(1, &ssbo_cameras);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_cameras);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _cameras.size() * sizeof(Camera), _cameras.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, ssbo_cameras);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+
+    // Bind indices array   
+    glGenBuffers(1, &ssbo_meshIndices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_meshIndices);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _meshIndexBuffer.size() * sizeof(Indices), _meshIndexBuffer.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, ssbo_meshIndices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+}
+
+void Scene::SetUniforms(Program* program)
+{
+    glUseProgram(program->id);
+
+    // Set background color and ambient lights
+    glUniform3f(glGetUniformLocation(program->id, "backgroundColor"), _backgroundColor.x, _backgroundColor.y, _backgroundColor.z);
+    glUniform3f(glGetUniformLocation(program->id, "ambientLight"), _ambientLight.x, _ambientLight.y, _ambientLight.z);
+
+    // Set camera properties
+    glUniform3f(glGetUniformLocation(program->id, "camera.position"), _activeCamera.position.x, _activeCamera.position.y, _activeCamera.position.z);
+    glUniform3f(glGetUniformLocation(program->id, "camera.gaze"), _activeCamera.gaze.x, _activeCamera.gaze.y, _activeCamera.gaze.z);
+    glUniform3f(glGetUniformLocation(program->id, "camera.up"), _activeCamera.up.x, _activeCamera.up.y, _activeCamera.up.z);
+    glUniform4f(glGetUniformLocation(program->id, "camera.nearPlane"), _activeCamera.nearPlane.x, _activeCamera.nearPlane.y, _activeCamera.nearPlane.z, _activeCamera.nearPlane.w);
+    glUniform2f(glGetUniformLocation(program->id, "camera.imageResolution"), _activeCamera.imageResolution.x, _activeCamera.imageResolution.y);
+    glUniform1f(glGetUniformLocation(program->id, "camera.nearDistance"), _activeCamera.nearDistance);
+
+    // Set max recursion depth
+    glUniform1i(glGetUniformLocation(program->id, "maxRecursionDepth"), _maxRecursionDepth);
+
+    // set shadow ray epsilon
+    glUniform1f(glGetUniformLocation(program->id, "shadowRayEpsilon"), _shadowRayEpsilon);
+
+    // set intersection test epsilon
+    glUniform1f(glGetUniformLocation(program->id, "intersectionTestEpsilon"), _intersectionTestEpsilon);
+
+    // set sizes of ssbo objects
+    glUniform1i(glGetUniformLocation(program->id, "lightCount"), _pointLights.size());
+    glUniform1i(glGetUniformLocation(program->id, "materialCount"), _materials.size());
+    glUniform1i(glGetUniformLocation(program->id, "vertexCount"), _vertexData.size());
+    glUniform1i(glGetUniformLocation(program->id, "meshCount"), _meshes.size());
+    glUniform1i(glGetUniformLocation(program->id, "meshIndexCount"), _meshIndexBuffer.size());
+    glUniform1i(glGetUniformLocation(program->id, "triangleCount"), _triangles.size());
+    glUniform1i(glGetUniformLocation(program->id, "sphereCount"), _spheres.size());                    
+
+
+
 
 }

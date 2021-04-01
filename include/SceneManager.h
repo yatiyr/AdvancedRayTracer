@@ -8,6 +8,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <GL/glu.h>
+#include <Program.h>
 
 class SceneManager
 {
@@ -20,6 +21,8 @@ public:
     ~SceneManager();
 
     void AddScene(const std::string& path);
+    void LoadScene(int index, Program* program);
+    void ExitScene(int index);
 
     Scene& GetScene(int index);
 };

@@ -17,6 +17,18 @@ void SceneManager::AddScene(const std::string& path)
     _scenes.push_back(x);
 }
 
+void SceneManager::LoadScene(int index, Program* program)
+{
+    _scenes[index].BindObjectsToGPU();
+    _scenes[index].SetUniforms(program);
+}
+
+void SceneManager::ExitScene(int index)
+{
+
+}
+
+
 Scene& SceneManager::GetScene(int index)
 {
     return _scenes[index];

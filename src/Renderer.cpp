@@ -89,6 +89,7 @@ Renderer::Renderer(unsigned int initialWidth, unsigned int initialHeight)
 
     _sceneManager.AddScene(std::string(ROOT_DIR) + "assets/scenes/simple.xml");
 
+
     InitializeGL(_width, _height);
 
 
@@ -262,6 +263,8 @@ uint8_t* Renderer::FloatToUint8(float* pixels)
 
 void Renderer::OneTimeRender()
 {
+
+    _sceneManager.LoadScene(0,_computeProgram);
 
     /*
     std::vector<float> eren = {1.0f, 0.0f, 0.5f, 0.5f};
