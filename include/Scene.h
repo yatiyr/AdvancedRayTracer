@@ -13,7 +13,7 @@
 
 #include <tinyxml2.h>
 #include <sstream>
-#include <Program.h>
+#include <ComputeProgram.h>
 
 #include <RootDir.h>
 
@@ -22,7 +22,8 @@ struct Camera
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 gaze;
     alignas(16) glm::vec3 up;
-    glm::vec4 nearPlane;
+    alignas(16) glm::vec3 v;
+    alignas(16) glm::vec4 nearPlane;
     glm::vec2 imageResolution;       
     float nearDistance;
 };
@@ -125,7 +126,7 @@ public:
     
     void BindObjectsToGPU();
 
-    void SetUniforms(Program* program);
+    void SetUniforms(ComputeProgram* program);
 
     Scene(const std::string& filepath);
     ~Scene();

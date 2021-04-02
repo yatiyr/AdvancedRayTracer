@@ -21,7 +21,7 @@ public:
     ~SceneManager();
 
     void AddScene(const std::string& path);
-    void LoadScene(int index, Program* program);
+    void LoadScene(int index, ComputeProgram* program);
     void ExitScene(int index);
 
     Scene& GetScene(int index);

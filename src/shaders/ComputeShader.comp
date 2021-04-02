@@ -3,15 +3,6 @@
 layout (local_size_x = 1, local_size_y = 1) in;
 layout (rgba32f, binding = 0) uniform image2D imgOutput;
 
-
-/* SSBO will be added like this
-layout(std430, binding=3) buffer layoutName
-{
-	float eren[];
-};
-
-*/
-
 // ------------------------ STRUCTS ----------------------------- //
 struct PointLight
 {
@@ -65,14 +56,28 @@ struct Camera
 	vec3 position;
 	vec3 gaze;
 	vec3 up;
+	vec3 v;
 	vec4 nearPlane;
 	vec2 imageResolution;
 	float nearDistance;
 };
 
+
+struct Ray
+{
+	vec3 origin;
+	vec3 direction;
+};
+
+struct IntersectionReport
+{
+	vec3 intersection;
+	float d;
+};
+
 // -------------------------------------------------------------- //
-
-
+#define FLT_MAX 3.402823466e+38
+#define FLT_MIN 1.175494351e-38
 // ------------------- UNIFORMS -------------------------- //
 
 uniform vec3 backgroundColor;
@@ -137,19 +142,127 @@ layout(std430, binding=10) buffer mshIndices
 
 // -------------------------------------------------------------- //
 
+// -------------------------- GLOBALS --------------------------- //
+/*
+	if(fabs(someFloat - 1.0) < 0.000001)
+	{
+
+	}
+
+*/
+// -------------------------------------------------------------- //
+
+
+// -------------------- FUNCTIONS ------------------------------- //
+
+
+Ray computePrimaryRay(ivec2 pixelCoords)
+{
+
+	Ray x;
+	x.origin = camera.position;
+	vec3 m = x.origin + camera.gaze * camera.nearDistance;
+	vec3 q = m + camera.nearPlane.x * camera.v + camera.nearPlane.w * camera.up;
+
+	float su = (pixelCoords.x + 0.5) * (camera.nearPlane.y - camera.nearPlane.x) / camera.imageResolution.x;
+	float sv = (pixelCoords.y + 0.5) * (camera.nearPlane.w - camera.nearPlane.z) / camera.imageResolution.y;
+
+	x.direction = (q + su*camera.v - sv*camera.up) - x.origin;
+	return x;
+}
+
+// This function tests intersection between a ray and a sphere
+IntersectionReport intersectSphere(Ray r, Sphere s)
+{
+	IntersectionReport report;
+
+	report.intersection = vec3(FLT_MIN);
+	report.d = FLT_MIN;
+
+	vec3 sphereCenter = vertexData[s.centerVertexId - 1].pos;
+
+	float discriminant = pow(dot(r.direction, (r.origin - sphereCenter)),2) - 
+	                     dot(r.direction,r.direction)*(dot(r.origin - sphereCenter, r.origin - sphereCenter) - 
+						                               s.radius * s.radius);
+	
+	float t;
+
+	if(discriminant >= 0)
+	{
+		float t1 = -(dot(r.direction, (r.origin - sphereCenter)) + sqrt(discriminant)) / dot(r.direction, r.direction);
+		float t2 = -(dot(r.direction, (r.origin - sphereCenter)) - sqrt(discriminant)) / dot(r.direction, r.direction);
+
+		t =  min(t1, t2);
+
+		report.d = t;
+		report.intersection = r.origin + t*r.direction;
+
+		
+		return report;
+	}
+
+
+	return report;
+}
+
+// This function tests intersection between a ray and a triangle
+IntersectionReport intersectFace(Ray r, Indices indices)
+{
+	IntersectionReport report;
+	report.intersection = vec3(FLT_MIN);
+	report.d = FLT_MIN;	
+
+	vec3 a = vertexData[indices.a].pos;
+	vec3 b = vertexData[indices.b].pos;
+	vec3 c = vertexData[indices.c].pos;
+
+	float  detA = determinant(mat3(a.x - b.x, a.x - c.x, r.direction.x,
+	              	               a.y - b.y, a.y - c.y, r.direction.y,
+				                   a.z - b.z, a.z - c.z, r.direction.z));
+
+	float beta = determinant(mat3(a.x - r.origin.x, a.x - c.x, r.direction.x,
+	                              a.y - r.origin.y, a.y - c.y, r.direction.y,
+		                          a.z - r.origin.z, a.z - c.z, r.direction.z))/detA;
+
+	float gamma = determinant(mat3(a.x - b.x, a.x - r.origin.x, r.direction.x,
+	                               a.y - b.y, a.y - r.origin.y, r.direction.y,
+		                           a.z - b.z, a.z - r.origin.z, r.direction.z))/detA;
+
+	float t = determinant(mat3(a.x - b.x, a.x - c.x, a.x - r.origin.x,
+	                           a.y - b.y, a.y - c.y, a.y - r.origin.y,
+		                       a.z - b.z, a.z - c.z, a.z - r.origin.z))/detA;
+
+
+	if((beta + gamma <= 1) && (beta >= 0) && (gamma >= 0))
+	{
+		report.d = t;
+		report.intersection = r.origin + t*r.direction;		
+	}
+
+	return report;
+}
+
+
+// -------------------------------------------------------------- //
 void main()
 {
 	ivec2 size = imageSize(imgOutput);
 
 	// base pixel color for image
-	vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
+	vec4 pixel = vec4(backgroundColor, 1.0);
 
 	// get index in global work group i.e x,y position
 	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
 
+	Ray primaryRay = computePrimaryRay(pixelCoords);
+
+	float tMin = FLT_MAX;
+
+	
+
 	if(pixelCoords.x == 0 && pixelCoords.y == size.y - 1)
 	{
-		pixel = vec4(vertexData[6].pos , 1.0);
+		pixel = vec4(intersectSphere(primaryRay, spheres[0]).d, 0.0, 0.0 ,0.0);
 	}
 
 	//

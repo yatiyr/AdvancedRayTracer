@@ -17,7 +17,7 @@
 int main()
 {
 
-    Renderer RnDr(128, 128);
+    Renderer RnDr(800, 800);
 
     try
     {    

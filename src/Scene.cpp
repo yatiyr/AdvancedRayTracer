@@ -91,6 +91,11 @@ Scene::Scene(const std::string& filepath)
         stream >> camera.nearDistance;
         stream >> camera.imageResolution.x >> camera.imageResolution.y;
 
+        // normalize gaze and up and compute v
+        camera.gaze = glm::normalize(camera.gaze);
+        camera.up   = glm::normalize(camera.up);
+        camera.v    = glm::cross(camera.gaze, camera.up);
+
         std::string imageName;
         stream >> imageName;
         imageNames.push_back(_imageName);
@@ -302,7 +307,7 @@ void Scene::BindObjectsToGPU()
 
 }
 
-void Scene::SetUniforms(Program* program)
+void Scene::SetUniforms(ComputeProgram* program)
 {
     glUseProgram(program->id);
 
@@ -314,6 +319,7 @@ void Scene::SetUniforms(Program* program)
     glUniform3f(glGetUniformLocation(program->id, "camera.position"), _activeCamera.position.x, _activeCamera.position.y, _activeCamera.position.z);
     glUniform3f(glGetUniformLocation(program->id, "camera.gaze"), _activeCamera.gaze.x, _activeCamera.gaze.y, _activeCamera.gaze.z);
     glUniform3f(glGetUniformLocation(program->id, "camera.up"), _activeCamera.up.x, _activeCamera.up.y, _activeCamera.up.z);
+    glUniform3f(glGetUniformLocation(program->id, "camera.v"), _activeCamera.v.x, _activeCamera.v.y, _activeCamera.v.z);
     glUniform4f(glGetUniformLocation(program->id, "camera.nearPlane"), _activeCamera.nearPlane.x, _activeCamera.nearPlane.y, _activeCamera.nearPlane.z, _activeCamera.nearPlane.w);
     glUniform2f(glGetUniformLocation(program->id, "camera.imageResolution"), _activeCamera.imageResolution.x, _activeCamera.imageResolution.y);
     glUniform1f(glGetUniformLocation(program->id, "camera.nearDistance"), _activeCamera.nearDistance);
