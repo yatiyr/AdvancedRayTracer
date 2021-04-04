@@ -95,6 +95,7 @@ public:
     GLuint ssbo_meshIndexBuffer;
     GLuint ssbo_cameras;
     GLuint ssbo_meshIndices;
+    GLuint ssbo_meshNormals;
       
 
     std::vector<PointLight> _pointLights;
@@ -104,6 +105,8 @@ public:
     std::vector<Triangle>   _triangles;
     std::vector<Sphere>     _spheres;
     std::vector<Camera>    _cameras;
+    std::vector<Vertex> _meshNormals;
+
 
     // all indices of all meshes in the scene are
     // recorded in this buffer and sent to gpu as one buffer
@@ -127,6 +130,8 @@ public:
     void BindObjectsToGPU();
 
     void SetUniforms(ComputeProgram* program);
+
+    void ComputeFaceNormals();
 
     Scene(const std::string& filepath);
     ~Scene();

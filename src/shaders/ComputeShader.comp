@@ -72,7 +72,9 @@ struct Ray
 struct IntersectionReport
 {
 	vec3 intersection;
+	vec3 normal;
 	float d;
+	int materialId;
 };
 
 // -------------------------------------------------------------- //
@@ -140,6 +142,11 @@ layout(std430, binding=10) buffer mshIndices
 	Indices meshIndexBuffer[];
 };
 
+layout(std430, binding=11) buffer mshNormals
+{
+	Vertex meshNormals[];
+};
+
 // -------------------------------------------------------------- //
 
 // -------------------------- GLOBALS --------------------------- //
@@ -150,6 +157,9 @@ layout(std430, binding=10) buffer mshIndices
 	}
 
 */
+
+float tmin = 0;
+float tmax = 1000;
 // -------------------------------------------------------------- //
 
 
@@ -167,17 +177,17 @@ Ray computePrimaryRay(ivec2 pixelCoords)
 	float su = (pixelCoords.x + 0.5) * (camera.nearPlane.y - camera.nearPlane.x) / camera.imageResolution.x;
 	float sv = (pixelCoords.y + 0.5) * (camera.nearPlane.w - camera.nearPlane.z) / camera.imageResolution.y;
 
-	x.direction = (q + su*camera.v - sv*camera.up) - x.origin;
+	x.direction = normalize((q + su*camera.v - sv*camera.up) - x.origin);
 	return x;
 }
 
 // This function tests intersection between a ray and a sphere
-IntersectionReport intersectSphere(Ray r, Sphere s)
+IntersectionReport intersectSphere(Ray r, Sphere s, float tmin, float tmax)
 {
 	IntersectionReport report;
 
 	report.intersection = vec3(FLT_MIN);
-	report.d = FLT_MIN;
+	report.d = FLT_MAX;
 
 	vec3 sphereCenter = vertexData[s.centerVertexId - 1].pos;
 
@@ -194,8 +204,13 @@ IntersectionReport intersectSphere(Ray r, Sphere s)
 
 		t =  min(t1, t2);
 
-		report.d = t;
-		report.intersection = r.origin + t*r.direction;
+		if(t > tmin && t < tmax)
+		{
+			report.d = t;
+			report.intersection = r.origin + t*r.direction;
+			report.materialId = s.materialId;
+			report.normal = normalize(report.intersection - sphereCenter);
+		}
 
 		
 		return report;
@@ -206,40 +221,242 @@ IntersectionReport intersectSphere(Ray r, Sphere s)
 }
 
 // This function tests intersection between a ray and a triangle
-IntersectionReport intersectFace(Ray r, Indices indices)
+IntersectionReport intersectFace(Ray r, Indices indices, float tmin, float tmax)
 {
 	IntersectionReport report;
 	report.intersection = vec3(FLT_MIN);
-	report.d = FLT_MIN;	
+	report.d = FLT_MAX;	
 
-	vec3 a = vertexData[indices.a].pos;
-	vec3 b = vertexData[indices.b].pos;
-	vec3 c = vertexData[indices.c].pos;
+	vec3 a = vertexData[indices.a - 1].pos;
+	vec3 b = vertexData[indices.b - 1].pos;
+	vec3 c = vertexData[indices.c - 1].pos;
 
-	float  detA = determinant(mat3(a.x - b.x, a.x - c.x, r.direction.x,
-	              	               a.y - b.y, a.y - c.y, r.direction.y,
-				                   a.z - b.z, a.z - c.z, r.direction.z));
-
-	float beta = determinant(mat3(a.x - r.origin.x, a.x - c.x, r.direction.x,
-	                              a.y - r.origin.y, a.y - c.y, r.direction.y,
-		                          a.z - r.origin.z, a.z - c.z, r.direction.z))/detA;
-
-	float gamma = determinant(mat3(a.x - b.x, a.x - r.origin.x, r.direction.x,
-	                               a.y - b.y, a.y - r.origin.y, r.direction.y,
-		                           a.z - b.z, a.z - r.origin.z, r.direction.z))/detA;
-
-	float t = determinant(mat3(a.x - b.x, a.x - c.x, a.x - r.origin.x,
-	                           a.y - b.y, a.y - c.y, a.y - r.origin.y,
-		                       a.z - b.z, a.z - c.z, a.z - r.origin.z))/detA;
+	float detA = determinant(mat3(vec3(a.x - b.x, a.y - b.y, a.z - b.z),
+	                              vec3(a.x - c.x, a.y - c.y, a.z - c.z),
+								  vec3(r.direction.x, r.direction.y, r.direction.z)));
 
 
-	if((beta + gamma <= 1) && (beta >= 0) && (gamma >= 0))
+	float beta = determinant(mat3(vec3(a.x - r.origin.x, a.y - r.origin.y, a.z - r.origin.z),
+	                              vec3(a.x - c.x, a.y - c.y, a.z - c.z),
+								  vec3(r.direction.x, r.direction.y, r.direction.z)))/detA;
+
+	float gamma = determinant(mat3(vec3(a.x - b.x, a.y - b.y, a.z - b.z),
+	                               vec3(a.x - r.origin.x, a.y - r.origin.y, a.z - r.origin.z),
+								   vec3(r.direction.x, r.direction.y, r.direction.z)))/detA;
+
+
+	float t = determinant(mat3(vec3(a.x - b.x, a.y - b.y, a.z - b.z),
+	                           vec3(a.x - c.x, a.y - c.y, a.z - c.z),
+							   vec3(a.x - r.origin.x, a.y - r.origin.y, a.z - r.origin.z)))/detA;
+
+
+	if((beta + gamma <= 1 + intersectionTestEpsilon) && (beta >= -intersectionTestEpsilon) && (gamma >= -intersectionTestEpsilon) && t>tmin && t<tmax)
 	{
 		report.d = t;
 		report.intersection = r.origin + t*r.direction;		
 	}
 
 	return report;
+}
+
+IntersectionReport intersectTriangle(Ray r, Triangle triangle)
+{
+	IntersectionReport report = intersectFace(r, triangle.indices, tmin, tmax);
+	report.materialId = triangle.materialId;
+
+	vec3 a = vertexData[triangle.indices.a-1].pos;
+	vec3 b = vertexData[triangle.indices.b-1].pos;
+	vec3 c = vertexData[triangle.indices.c-1].pos;
+
+	report.normal = normalize(cross(b-a, c-a));
+
+
+	return report;
+}
+
+IntersectionReport intersectMesh(Ray r, Mesh mesh)
+{
+	float tMin = FLT_MAX;
+
+	IntersectionReport report;
+	report.intersection = vec3(FLT_MAX);
+	report.d = tMin;	
+	report.materialId = mesh.materialId;
+
+	for(uint i= mesh.indicesOffset; i<mesh.indicesSize; i++)
+	{
+		IntersectionReport rprt = intersectFace(r, meshIndexBuffer[i], tmin, tmax);
+
+		if(rprt.d < tMin)
+		{
+			report.intersection = rprt.intersection;
+			report.normal = meshNormals[i].pos;
+			report.d = rprt.d;
+			tMin = report.d;
+		}
+	}
+
+
+	return report;	
+}
+
+IntersectionReport testWorldIntersection(Ray primaryRay)
+{
+	float tMin = FLT_MAX;
+	IntersectionReport report;
+	report.intersection = vec3(FLT_MAX);
+	report.d = FLT_MAX;	
+
+	
+	for(uint i=0; i<meshCount; i++)
+	{
+		IntersectionReport r = intersectMesh(primaryRay, meshes[i]);
+		if(r.d < tMin)
+		{
+			report = r;
+			tMin = r.d;
+		}
+	}
+	
+
+	
+	for(uint i=0; i<triangleCount; i++)
+	{
+		IntersectionReport r = intersectTriangle(primaryRay, triangles[i]);
+		if(r.d < tMin)
+		{
+			report = r;
+			tMin = r.d;
+		}		
+	}
+	
+	
+	
+	for(uint i=0; i<sphereCount; i++)
+	{
+		IntersectionReport r = intersectSphere(primaryRay, spheres[i], tmin, tmax);
+		if(r.d < tMin)
+		{
+			report = r;
+			tMin = r.d;
+		}
+	}
+	
+	
+
+	return report;
+}
+
+bool shadowRayIntersection(Ray ray, float dist)
+{
+	float tMin = FLT_MAX;
+	IntersectionReport report;
+	report.intersection = vec3(FLT_MAX);
+	report.d = FLT_MAX;
+
+	for(uint i=0; i<meshCount; i++)
+	{
+		IntersectionReport r = intersectMesh(ray, meshes[i]);
+		if(r.d < dist)
+		{
+			return true;
+		}
+	}
+	
+
+	
+	for(uint i=0; i<triangleCount; i++)
+	{
+		IntersectionReport r = intersectTriangle(ray, triangles[i]);
+		if(r.d < dist)
+		{
+			return true;
+		}		
+	}
+	
+	
+	
+	for(uint i=0; i<sphereCount; i++)
+	{
+		IntersectionReport r = intersectSphere(ray, spheres[i], tmin, tmax);
+		if(r.d < dist)
+		{
+			return true;
+		}
+	}
+
+	return false;
+
+}
+
+vec3 computeAmbientComponent(IntersectionReport report)
+{
+	return ambientLight * materials[report.materialId - 1].ambientReflectance;
+}
+
+vec3 computeDiffuseComponent(IntersectionReport report, PointLight light)
+{
+	vec3 result = vec3(0.0);
+
+	float lightDistance = length(light.position - report.intersection);
+	vec3 wi = normalize(light.position - report.intersection);
+	result += materials[report.materialId - 1].diffuseReflectance * 
+		      max(0,dot(wi, report.normal)) * 
+			  (light.intensity/(lightDistance*lightDistance));
+
+	return result;
+}
+
+vec3 computeSpecularComponent(IntersectionReport report, Ray primaryRay, PointLight light)
+{
+	vec3 result = vec3(0.0);
+
+
+	float lightDistance = length(light.position - report.intersection);		
+	vec3 wi = normalize(light.position - report.intersection);
+	vec3 h = normalize(wi - primaryRay.direction);
+
+	result += materials[report.materialId - 1].specularReflectance *
+		      pow(max(0, dot(report.normal, h)), materials[report.materialId -1].phongExponent) *
+			  (light.intensity/(lightDistance*lightDistance));				  
+
+
+
+	return result;
+}
+
+bool shadowTest(IntersectionReport report, PointLight light)
+{
+	Ray lightRay;
+
+	lightRay.direction = normalize(light.position - report.intersection);
+	lightRay.origin = report.intersection + shadowRayEpsilon*report.normal;
+
+	float dist = length(light.position - report.intersection);
+
+
+	return shadowRayIntersection(lightRay, dist);
+
+}
+
+vec3 computeFinalColor(IntersectionReport report, Ray primaryRay)
+{
+	vec3 result = computeAmbientComponent(report);
+
+	for(uint i=0; i<lightCount; i++)
+	{
+		if(shadowTest(report, pointLights[i]))
+		{
+			continue;
+		}
+		else
+		{
+			result += computeDiffuseComponent(report, pointLights[i]) + 
+			          computeSpecularComponent(report, primaryRay, pointLights[i]);
+		}
+	}
+
+	return clamp(result, vec3(0.0), vec3(1.0));
 }
 
 
@@ -255,15 +472,30 @@ void main()
 	ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
 
 	Ray primaryRay = computePrimaryRay(pixelCoords);
+	IntersectionReport report = testWorldIntersection(primaryRay);
 
-	float tMin = FLT_MAX;
+
+	if(report.d != FLT_MAX)
+	{
+
+
+		pixel = vec4(computeFinalColor(report, primaryRay), 1.0);
+	}
+	else
+	{
+		pixel = vec4(backgroundColor, 1.0);
+	}
 
 	
-
-	if(pixelCoords.x == 0 && pixelCoords.y == size.y - 1)
+	if(pixelCoords.x == 280 && pixelCoords.y == size.y - 230)
 	{
-		pixel = vec4(intersectSphere(primaryRay, spheres[0]).d, 0.0, 0.0 ,0.0);
+
+
+
+		//pixel = vec4(lightRay.origin, 1.0);
+
 	}
+	
 
 	//
 	// TODO: IMPLEMENT HERE

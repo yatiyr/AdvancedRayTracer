@@ -19,8 +19,10 @@ void SceneManager::AddScene(const std::string& path)
 
 void SceneManager::LoadScene(int index, ComputeProgram* program)
 {
+    _scenes[index].ComputeFaceNormals();
     _scenes[index].BindObjectsToGPU();
     _scenes[index].SetUniforms(program);
+    
 }
 
 void SceneManager::ExitScene(int index)

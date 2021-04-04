@@ -82,13 +82,14 @@ void Renderer::InitializeGL(int width, int height)
 
 }
 
-Renderer::Renderer(unsigned int initialWidth, unsigned int initialHeight)
+Renderer::Renderer()
 {
-    _width  = initialWidth;
-    _height = initialHeight;
 
-    _sceneManager.AddScene(std::string(ROOT_DIR) + "assets/scenes/simple.xml");
+    _sceneManager.AddScene(std::string(ROOT_DIR) + "assets/scenes/scienceTree.xml");
 
+
+    _width  = _sceneManager.GetScene(0)._activeCamera.imageResolution.x;
+    _height = _sceneManager.GetScene(0)._activeCamera.imageResolution.y;
 
     InitializeGL(_width, _height);
 
@@ -144,6 +145,8 @@ void Renderer::InitializeShaderPrograms()
 
 void Renderer::RenderLoop()
 {
+    
+    _sceneManager.LoadScene(0,_computeProgram);
 
     while(!glfwWindowShouldClose(_window))
     {
@@ -221,7 +224,7 @@ void Renderer::UpdateTexture(float frame)
 
     // _width * _height threads in blocks of 16^2
     glDispatchCompute(_width, _height, 1);
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     
 }
 

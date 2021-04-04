@@ -88,7 +88,7 @@ private:
 public:
 
     // Initial width and height are 800 and 600 by default
-    Renderer(unsigned int initialWidth = 800, unsigned int initialHeight = 600);
+    Renderer();
 
     ~Renderer();
 

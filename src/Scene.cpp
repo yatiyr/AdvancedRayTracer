@@ -94,7 +94,7 @@ Scene::Scene(const std::string& filepath)
         // normalize gaze and up and compute v
         camera.gaze = glm::normalize(camera.gaze);
         camera.up   = glm::normalize(camera.up);
-        camera.v    = glm::cross(camera.gaze, camera.up);
+        camera.v    = glm::normalize(glm::cross(camera.gaze, camera.up));
 
         std::string imageName;
         stream >> imageName;
@@ -110,6 +110,9 @@ Scene::Scene(const std::string& filepath)
     auto child = element->FirstChildElement("AmbientLight");
     stream << child->GetText() << std::endl;
     stream >> _ambientLight.x >> _ambientLight.y >> _ambientLight.z;
+    _ambientLight.x /= 255.99;
+    _ambientLight.y /= 255.99;
+    _ambientLight.z /= 255.99;
     element = element->FirstChildElement("PointLight");
     PointLight pointLight;
     while(element)
@@ -141,7 +144,15 @@ Scene::Scene(const std::string& filepath)
         //child = element->FirstChildElement("MirrorReflectance");
         //stream << child->GetText() << std::endl;
         child = element->FirstChildElement("PhongExponent");
-        stream << child->GetText() << std::endl;
+        if(child)
+        {
+            stream << child->GetText() << std::endl;
+        }
+        else
+        {
+            stream << "1" << std::endl;
+        }
+
 
         stream >> material.ambientReflectance.x >> material.ambientReflectance.y >> material.ambientReflectance.z;
         stream >> material.diffuseReflectance.x >> material.diffuseReflectance.y >> material.diffuseReflectance.z;
@@ -152,7 +163,7 @@ Scene::Scene(const std::string& filepath)
         _materials.push_back(material);
         element = element->NextSiblingElement("Material");
     }
-
+    stream.clear();
     // Get VertexData
     element = root->FirstChildElement("VertexData");
     stream << element->GetText() << std::endl;
@@ -242,6 +253,24 @@ Scene::~Scene()
     
 }
 
+void Scene::ComputeFaceNormals()
+{
+    for(size_t i=0; i<_meshIndexBuffer.size(); i++)
+    {
+        Indices faceIndices = _meshIndexBuffer[i];
+        Vertex normalElement;
+        glm::vec3 a = _vertexData[faceIndices.a-1].pos;
+        glm::vec3 b = _vertexData[faceIndices.b-1].pos;
+        glm::vec3 c = _vertexData[faceIndices.c-1].pos;
+
+        glm::vec3 normal = glm::cross((b-a),(c-a));
+        normal = glm::normalize(normal);
+        normalElement.pos = normal;
+
+        _meshNormals.push_back(normalElement);
+    }
+}
+
 
 void Scene::BindObjectsToGPU()
 {
@@ -304,6 +333,13 @@ void Scene::BindObjectsToGPU()
     glBufferData(GL_SHADER_STORAGE_BUFFER, _meshIndexBuffer.size() * sizeof(Indices), _meshIndexBuffer.data(), GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, ssbo_meshIndices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // Bind mesh normals array   
+    glGenBuffers(1, &ssbo_meshNormals);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_meshNormals);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _meshNormals.size() * sizeof(Vertex), _meshNormals.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, ssbo_meshNormals);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);    
 
 }
 

@@ -8,7 +8,7 @@
             <Position> 0 2.5 0 </Position>
             <Gaze> 0 -0.2 -1 </Gaze> <!-- Watch out: make the uvw vectors orthonormal -->
             <Up> 0 1 0 </Up>
-            <NearPlane> -1 1 -1 1 10</NearPlane>
+            <NearPlane> -1 1 -1 1</NearPlane>
             <NearDistance>10</NearDistance>
             <ImageResolution> 720 720 </ImageResolution>
             <ImageName> spheres.png </ImageName>
@@ -19,11 +19,11 @@
         <AmbientLight> 25 25 25 </AmbientLight>
         <PointLight id="1">
             <Position> -4 4 -13  </Position>
-            <Intensity> 8550 8550 8550 </Intensity> 
+            <Intensity> 45 45 45 </Intensity> 
         </PointLight>
         <PointLight id="2">
             <Position> 4 4 -13  </Position>
-            <Intensity> 8550 8550 8550 </Intensity> 
+            <Intensity> 55 55 55 </Intensity> 
         </PointLight>
     </Lights>
 
@@ -61,13 +61,13 @@
     </Materials>
 
     <VertexData>
-		-10 -0.8 0   
-		10 -0.8 0    
+		-10 -0.8 0
+		10 -0.8 0
 		-10 -0.8 -100
-		10 -0.8 -100 
-		0 -0.2 -17   
-		0.5 -0.5 -15 
-		1.0 -0.5 -16 
+		10 -0.8 -100
+		0 -0.2 -17
+		0.5 -0.5 -15
+		1.0 -0.5 -16
 		-1.0 -0.5 -13
 		-0.2 -0.5 -14
 	</VertexData>
