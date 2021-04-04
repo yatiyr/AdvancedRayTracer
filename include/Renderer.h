@@ -23,11 +23,22 @@
 #include <SceneManager.h>
 
 
+enum RenderingMode
+{
+    GPU_RENDERING = 1,
+    CPU_RENDERING = 2
+};
+
 // Base renderer class
 class Renderer
 {
 private:
 
+
+    // 
+    RenderingMode renderMode;
+
+    // This objects keeps track of scenes we add
     SceneManager _sceneManager;
 
     // store glfw window pointer here

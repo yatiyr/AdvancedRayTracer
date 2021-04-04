@@ -98,7 +98,8 @@ Scene::Scene(const std::string& filepath)
 
         std::string imageName;
         stream >> imageName;
-        imageNames.push_back(_imageName);
+        imageNames.push_back(imageName);
+        _imageName = imageName;
 
 
         _cameras.push_back(camera);

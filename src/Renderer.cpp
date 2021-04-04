@@ -269,18 +269,6 @@ void Renderer::OneTimeRender()
 
     _sceneManager.LoadScene(0,_computeProgram);
 
-    /*
-    std::vector<float> eren = {1.0f, 0.0f, 0.5f, 0.5f};
-
-    GLuint ssbo;
-    glGenBuffers(1, &ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, eren.size() * sizeof(float), eren.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    */
-
     UpdateTexture(1);
     DrawImage();
 
@@ -299,7 +287,7 @@ void Renderer::OneTimeRender()
     uint8_t* result = FloatToUint8(pixels);
 
     stbi_flip_vertically_on_write(true);
-    stbi_write_png("test.png",_width, _height, 3, result, _width * 3);
+    stbi_write_png(_sceneManager.GetScene(0)._imageName.c_str(),_width, _height, 3, result, _width * 3);
 }
 
 Renderer::~Renderer()

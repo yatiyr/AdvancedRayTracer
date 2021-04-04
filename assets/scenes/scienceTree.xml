@@ -1,5 +1,5 @@
 <Scene>
-    <BackgroundColor>0 0 0</BackgroundColor>
+    <BackgroundColor>0 50 50</BackgroundColor>
 
     <Cameras>
         <Camera id="1">

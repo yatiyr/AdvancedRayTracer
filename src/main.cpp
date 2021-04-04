@@ -1,17 +1,6 @@
 #include <iostream>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <math.h>
-#include <stb_image.h>
-
-
 #include <Renderer.h>
-
-
-
+#include <Timer.h>
 
 
 int main()
@@ -21,7 +10,10 @@ int main()
 
     try
     {    
+        {
+        Timer t;
         RnDr.OneTimeRender();
+        }
     }
     catch(const std::exception& e)
     {
