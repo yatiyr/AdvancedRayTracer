@@ -22,6 +22,7 @@ void SceneManager::LoadScene(int index, ComputeProgram* program)
     _scenes[index].ComputeFaceNormals();
     _scenes[index].BindObjectsToGPU();
     _scenes[index].SetUniforms(program);
+    _activeSceneID = index;
     
 }
 
@@ -34,4 +35,9 @@ void SceneManager::ExitScene(int index)
 Scene& SceneManager::GetScene(int index)
 {
     return _scenes[index];
+}
+
+Scene& SceneManager::GetActiveScene()
+{
+    return _scenes[_activeSceneID];
 }

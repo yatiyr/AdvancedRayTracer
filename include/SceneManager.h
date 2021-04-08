@@ -15,6 +15,8 @@ class SceneManager
 private:
     std::vector<Scene> _scenes;
 
+    int _activeSceneID;
+
 public:
 
     SceneManager();
@@ -24,6 +26,7 @@ public:
     void LoadScene(int index, ComputeProgram* program);
     void ExitScene(int index);
 
+    Scene& GetActiveScene();
     Scene& GetScene(int index);
 };
 

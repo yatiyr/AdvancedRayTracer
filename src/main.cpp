@@ -3,17 +3,14 @@
 #include <Timer.h>
 
 
-int main()
+int main(int argc, char** argv)
 {
 
-    Renderer RnDr;
+    Renderer RnDr(argv[1], RenderingMode::OFFSCREEN_RENDERING_BIT);
 
     try
     {    
-        {
-        Timer t;
         RnDr.OneTimeRender();
-        }
     }
     catch(const std::exception& e)
     {

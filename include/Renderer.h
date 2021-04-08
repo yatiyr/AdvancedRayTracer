@@ -11,7 +11,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <math.h>
 #include <stb_image.h>
-
 #include <RootDir.h>
 
 #include <ComputeProgram.h>
@@ -19,14 +18,17 @@
 
 #include <stb_image.h>
 #include <stb_image_write.h>
+#include <Timer.h>
 
 #include <SceneManager.h>
+#include <vector>
 
 
 enum RenderingMode
 {
-    GPU_RENDERING = 1,
-    CPU_RENDERING = 2
+    GPU_RENDERING_BIT = 0x00000,
+    CPU_RENDERING_BIT = 0x00001,
+    OFFSCREEN_RENDERING_BIT = 0x00002,
 };
 
 // Base renderer class
@@ -101,13 +103,15 @@ public:
     // Initial width and height are 800 and 600 by default
     Renderer();
 
+    Renderer(const char* file, RenderingMode mode);
+
     ~Renderer();
 
     void RenderLoop();
 
     void OneTimeRender();    
 
-    static void InitializeGL(int height, int width);
+    static void InitializeGL(int height, int width, RenderingMode mode);
 
 };
 

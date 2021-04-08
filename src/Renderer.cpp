@@ -1,7 +1,5 @@
 #include <Renderer.h>
 
-#include <vector>
-
 void Renderer::Framebuffer_Size_Callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
@@ -67,7 +65,7 @@ void Renderer::FindComputeShaderExtension()
     }
 }
 
-void Renderer::InitializeGL(int width, int height)
+void Renderer::InitializeGL(int width, int height, RenderingMode mode)
 {
     glfwInit();
 
@@ -78,29 +76,33 @@ void Renderer::InitializeGL(int width, int height)
 
     #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    #endif      
+    #endif
+
+    if(mode & RenderingMode::OFFSCREEN_RENDERING_BIT)
+    {
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    }
 
 }
 
-Renderer::Renderer()
+
+// For now this constructor will be used for demonstration
+Renderer::Renderer(const char* file, RenderingMode mode)
 {
+    _sceneManager.AddScene(std::string(ROOT_DIR) + std::string(file));
 
-    _sceneManager.AddScene(std::string(ROOT_DIR) + "assets/scenes/scienceTree.xml");
-
-
-    _width  = _sceneManager.GetScene(0)._activeCamera.imageResolution.x;
+    _width = _sceneManager.GetScene(0)._activeCamera.imageResolution.x;
     _height = _sceneManager.GetScene(0)._activeCamera.imageResolution.y;
 
-    InitializeGL(_width, _height);
+    InitializeGL(_width, _height, mode);
 
-
-    _window = glfwCreateWindow(_width, _height, "AdvancedRayTracer", nullptr, nullptr);
+    _window = glfwCreateWindow(_width, _height, "AdvancedRayTracer", nullptr, nullptr);    
     if(_window == nullptr)
     {
         glfwTerminate();
         throw std::runtime_error("Could not create glfw window.");
 
-    }     
+    }
 
     // Change contex to our window class variable
     glfwMakeContextCurrent(_window);
@@ -111,6 +113,7 @@ Renderer::Renderer()
     glfwSetCursorPosCallback(_window, Mouse_Callback);
     glfwSetScrollCallback(_window, Scroll_Callback);
 
+    
     // if we want to disable mouse
     // glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -118,17 +121,68 @@ Renderer::Renderer()
 
     GenerateTexture();
 
-    PrintDeviceProperties();
-    FindComputeShaderExtension();
 
     glViewport(0, 0, _width, _height);
 
     // read load compile and link shader programs
     InitializeShaderPrograms();
 
-    GetMaximumWorkGroupCount();
 
-    GetMaximumWorkGroupSize();
+    //PrintDeviceProperties();
+    //FindComputeShaderExtension();
+    //GetMaximumWorkGroupCount();
+    //GetMaximumWorkGroupSize();
+
+}
+
+Renderer::Renderer()
+{
+
+    _sceneManager.AddScene(std::string(ROOT_DIR) + "assets/scenes/two_spheres.xml");
+
+
+    _width  = _sceneManager.GetScene(0)._activeCamera.imageResolution.x;
+    _height = _sceneManager.GetScene(0)._activeCamera.imageResolution.y;
+
+    InitializeGL(_width, _height, RenderingMode::GPU_RENDERING_BIT);
+
+    
+    _window = glfwCreateWindow(_width, _height, "AdvancedRayTracer", nullptr, nullptr);    
+    if(_window == nullptr)
+    {
+        glfwTerminate();
+        throw std::runtime_error("Could not create glfw window.");
+
+    }
+
+    // Change contex to our window class variable
+    glfwMakeContextCurrent(_window);
+    
+
+    // Register callbacks
+    glfwSetFramebufferSizeCallback(_window, Framebuffer_Size_Callback);
+    glfwSetCursorPosCallback(_window, Mouse_Callback);
+    glfwSetScrollCallback(_window, Scroll_Callback);
+
+    
+    // if we want to disable mouse
+    // glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    LoadFunctionPointers();
+
+    GenerateTexture();
+
+
+    glViewport(0, 0, _width, _height);
+
+    // read load compile and link shader programs
+    InitializeShaderPrograms();
+
+
+    //PrintDeviceProperties();
+    //FindComputeShaderExtension();
+    //GetMaximumWorkGroupCount();
+    //GetMaximumWorkGroupSize();
 
 }
 
@@ -224,7 +278,7 @@ void Renderer::UpdateTexture(float frame)
 
     // _width * _height threads in blocks of 16^2
     glDispatchCompute(_width, _height, 1);
-    //glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     
 }
 
@@ -266,28 +320,38 @@ uint8_t* Renderer::FloatToUint8(float* pixels)
 
 void Renderer::OneTimeRender()
 {
+    float * pixels;
+    uint8_t*  result;
 
     _sceneManager.LoadScene(0,_computeProgram);
 
-    UpdateTexture(1);
-    DrawImage();
+    {
+        Timer t;
+        UpdateTexture(1);        
+        DrawImage();        
+        GLuint fbo;
+        glGenFramebuffers(1, &fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _textureHandle, 0);        
+        pixels = (float *)malloc(_width*_height* 4 * sizeof(float));
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+        glReadPixels(0, 0, _width, _height, GL_RGBA, GL_FLOAT, pixels);   
 
-    // FBO
-    GLuint fbo;
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _textureHandle, 0);
+        result = FloatToUint8(pixels);
 
-    float* pixels = (float *)malloc(_width*_height* 4 * sizeof(float));
-    glReadBuffer(GL_COLOR_ATTACHMENT0);
-    glReadPixels(0, 0, _width, _height, GL_RGBA, GL_FLOAT, pixels);
+        stbi_flip_vertically_on_write(true);
+        std::string outputPath = "outputs/" + _sceneManager.GetScene(0)._imageName;
+        stbi_write_png(outputPath.c_str(),_width, _height, 3, result, _width * 3);        
 
-    std::cout << pixels[0] << " " << pixels[1] << " " << pixels[2] << " " << pixels[3] << '\n';
+        std::cout << "Image rendered in --->";
+    }
 
-    uint8_t* result = FloatToUint8(pixels);
+        // I was using it for debugging compute shader
+        // std::cout << pixels[0] << " " << pixels[1] << " " << pixels[2] << " " << pixels[3] << '\n';
 
-    stbi_flip_vertically_on_write(true);
-    stbi_write_png(_sceneManager.GetScene(0)._imageName.c_str(),_width, _height, 3, result, _width * 3);
+        free(pixels);
+        free(result);
+    
 }
 
 Renderer::~Renderer()

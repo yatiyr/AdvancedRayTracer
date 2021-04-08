@@ -3,11 +3,14 @@
 
 #include <chrono>
 #include <iostream>
+#include <string>
+
 
 // A SCOPE BASED TIMER
 class Timer
 {
 private:
+    std::string message;
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
 
 public:
@@ -15,6 +18,12 @@ public:
     {
         startTime = std::chrono::high_resolution_clock::now();
     }
+
+    Timer(std::string message)
+    {
+        this->message = message;
+    }
+
     ~Timer()
     {
         auto endTimepoint = std::chrono::high_resolution_clock::now();
@@ -27,7 +36,7 @@ public:
 
         double ms = duration * 0.001;
 
-        std::cout << ms << "ms (" << ms * 0.001 << "s)" << std::endl;
+        std::cout << message << " " << ms << "ms (" << ms * 0.001 << "s)" << std::endl;
 
     }
 };

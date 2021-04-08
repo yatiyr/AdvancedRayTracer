@@ -31,8 +31,8 @@ message(STATUS "GLM included at ${GLM_INCLUDE_DIR}")
 find_package(glfw3 REQUIRED)
 message(STATUS "Found GLFW3 in ${GLFW3_INCLUDE_DIR}")
 
-find_package(assimp REQUIRED)
-message(STATUS "Found ASSIMP in ${ASSIMP_INCLUDE_DIR}")
+#find_package(assimp REQUIRED)
+#message(STATUS "Found ASSIMP in ${ASSIMP_INCLUDE_DIR}")
 
 
 # Define the include DIRs
@@ -56,4 +56,5 @@ set(LIBS glfw3 GL GLU X11 pthread  Xrandr Xi dl assimp STB_IMAGE TINY_XML2 GLAD)
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 
-file(COPY src/shaders DESTINATION ${CMAKE_BINARY_DIR})
+#file(COPY src/shaders DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY outputs DESTINATION ${CMAKE_BINARY_DIR})
