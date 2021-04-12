@@ -15,67 +15,9 @@
 #include <sstream>
 #include <ComputeProgram.h>
 
+#include <Structures.h>
+
 #include <RootDir.h>
-
-struct Camera
-{
-    alignas(16) glm::vec3 position;
-    alignas(16) glm::vec3 gaze;
-    alignas(16) glm::vec3 up;
-    alignas(16) glm::vec3 v;
-    alignas(16) glm::vec4 nearPlane;
-    glm::vec2 imageResolution;       
-    float nearDistance;
-};
-
-struct PointLight
-{
-    alignas(16) glm::vec3 position;
-    alignas(16) glm::vec3 intensity;
-};
-
-struct Material
-{
-    alignas(16) glm::vec3 ambientReflectance;
-    alignas(16) glm::vec3 diffuseReflectance;
-    alignas(16) glm::vec3 specularReflectance;
-    alignas(16) glm::vec3 mirrorReflectance;
-    float phongExponent;
-};
-
-struct Vertex
-{
-    alignas(16) glm::vec3 pos;
-};
-
-struct Indices
-{
-    int a;
-    int b;
-    int c;
-};
-
-struct Triangle
-{
-    int materialId;
-    Indices indices;
-};
-
-
-struct Mesh
-{
-    int materialId;
-    int indicesOffset;
-    int indicesSize;
-};
-
-
-struct Sphere
-{
-    int centerVertexId;
-    int materialId;
-    float radius;
-};
 
 class Scene
 {

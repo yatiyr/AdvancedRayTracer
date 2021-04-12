@@ -6,7 +6,7 @@
 int main(int argc, char** argv)
 {
 
-    Renderer RnDr(argv[1], RenderingMode::OFFSCREEN_RENDERING_BIT);
+    Renderer RnDr("assets/scenes/bunny.xml", RenderingMode::OFFSCREEN_RENDERING_BIT);
 
     try
     {    
