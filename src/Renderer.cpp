@@ -80,7 +80,7 @@ void Renderer::InitializeGL(int width, int height, RenderingMode mode)
 
     if(mode & RenderingMode::OFFSCREEN_RENDERING_BIT)
     {
-        //glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
     }
 
 }

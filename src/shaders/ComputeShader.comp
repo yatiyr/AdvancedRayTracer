@@ -42,6 +42,7 @@ struct Mesh
 	int materialId;
 	int indicesOffset;
 	int indicesSize;
+	int rootBVHNode;
 };
 
 struct Sphere
@@ -75,6 +76,25 @@ struct IntersectionReport
 	vec3 normal;
 	float d;
 	int materialId;
+};
+
+struct AABB
+{
+	float xmax;
+	float ymax;
+	float zmax;
+	float xmin;
+	float ymin;
+	float zmin;
+};
+
+struct BVHNode
+{
+	AABB aabb;
+	uint leftNode;
+	uint rightNode;
+	uint indicesOffset;
+	uint indicesSize;
 };
 
 // -------------------------------------------------------------- //
@@ -145,6 +165,16 @@ layout(std430, binding=10) buffer mshIndices
 layout(std430, binding=11) buffer mshNormals
 {
 	Vertex meshNormals[];
+};
+
+layout(std430, binding=12) buffer bvhIndices
+{
+	Indices BVHIndices[];
+};
+
+layout(std430, binding=13) buffer bvhNodes
+{
+	BVHNode BVHNodes[];
 };
 
 // -------------------------------------------------------------- //
