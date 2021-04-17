@@ -15,9 +15,15 @@
 #include <sstream>
 #include <ComputeProgram.h>
 
-#include <Structures.h>
 
 #include <RootDir.h>
+
+
+#include <Utils.h>
+
+
+#define MAX_DEPTH 100
+
 
 class Scene
 {
@@ -39,6 +45,8 @@ public:
     GLuint ssbo_meshIndices;
     GLuint ssbo_meshNormals;
       
+    GLuint ssbo_BVHIndices;
+    GLuint ssbo_BVHNodes;
 
     std::vector<PointLight> _pointLights;
     std::vector<Material>   _materials;
@@ -48,6 +56,9 @@ public:
     std::vector<Sphere>     _spheres;
     std::vector<Camera>    _cameras;
     std::vector<Vertex> _meshNormals;
+
+    std::vector<Indices> _BVHIndices;
+    std::vector<BVHNode> _BVHNodes;
 
 
     // all indices of all meshes in the scene are

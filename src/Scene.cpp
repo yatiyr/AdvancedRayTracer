@@ -180,6 +180,10 @@ Scene::Scene(const std::string& filepath)
     element = root->FirstChildElement("Objects");
     element = element->FirstChildElement("Mesh");
     Mesh mesh;
+
+    int nodeCounter = 0;
+    int indexCounter = 0;
+
     int offset = 0;
     while(element)
     {
@@ -191,14 +195,29 @@ Scene::Scene(const std::string& filepath)
         stream << child->GetText() << std::endl;
         Indices indices;
         mesh.indicesOffset = offset;
+
+        std::vector<Indices> indicesVec;
+
         while(!(stream >> indices.a).eof())
         {
             stream >> indices.b >> indices.c;
             _meshIndexBuffer.push_back(indices);
             offset++;
+            indicesVec.push_back(indices);
         }
+
         mesh.indicesSize = offset;
         stream.clear();
+
+        mesh.rootBVHNode = constructBVH(indicesVec,
+                                        _vertexData,
+                                        _BVHIndices,
+                                        _BVHNodes,
+                                        nodeCounter,
+                                        indexCounter,
+                                        0,
+                                        MAX_DEPTH,
+                                        0);
 
         _meshes.push_back(mesh);
         element = element->NextSiblingElement("Mesh");
@@ -340,7 +359,21 @@ void Scene::BindObjectsToGPU()
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_meshNormals);
     glBufferData(GL_SHADER_STORAGE_BUFFER, _meshNormals.size() * sizeof(Vertex), _meshNormals.data(), GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, ssbo_meshNormals);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);    
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); 
+
+    // Bind mesh normals array   
+    glGenBuffers(1, &ssbo_BVHIndices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHIndices);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHIndices.size() * sizeof(Indices), _BVHIndices.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 12, ssbo_BVHIndices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); 
+
+    // Bind mesh normals array   
+    glGenBuffers(1, &ssbo_BVHNodes);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHNodes);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHNodes.size() * sizeof(BVHNode), _BVHNodes.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 13, ssbo_BVHNodes);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);       
 
 }
 
