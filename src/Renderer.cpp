@@ -292,7 +292,7 @@ void Renderer::DrawImage()
 uint8_t* Renderer::FloatToUint8(float* pixels)
 {
     // we will omit alpha channel
-    uint8_t* result = new uint8_t[_width * _height * 3];
+    uint8_t* res = new uint8_t[_width * _height * 3];
 
     int indexSrc = 0;
     int indexDst = 0;
@@ -309,13 +309,13 @@ uint8_t* Renderer::FloatToUint8(float* pixels)
             int ig = int(255.99 * g);
             int ib = int(255.99 * b);
 
-            result[indexDst++] = ir;
-            result[indexDst++] = ig;
-            result[indexDst++] = ib;
+            res[indexDst++] = ir;
+            res[indexDst++] = ig;
+            res[indexDst++] = ib;
         }
     }
 
-    return result;
+    return res;
 }
 
 void Renderer::OneTimeRender()
@@ -347,10 +347,10 @@ void Renderer::OneTimeRender()
     }
 
         // I was using it for debugging compute shader
-        // std::cout << pixels[0] << " " << pixels[1] << " " << pixels[2] << " " << pixels[3] << '\n';
+        std::cout << pixels[0] << " " << pixels[1] << " " << pixels[2] << " " << pixels[3] << '\n';
 
         free(pixels);
-        free(result);
+        delete[] result;
     
 }
 

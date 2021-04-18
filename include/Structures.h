@@ -5,6 +5,7 @@
 #include <set>
 #include <vector>
 #include <algorithm>
+#include <list>
 
 struct Camera
 {
@@ -79,7 +80,7 @@ struct CompareX
 {
     inline bool operator() (const VertexIndex& lhs, const VertexIndex& rhs) const
     {
-        return lhs.vertex.x <= rhs.vertex.x;
+        return lhs.vertex.x < rhs.vertex.x;
     }
 };
 
@@ -87,7 +88,7 @@ struct CompareY
 {
     inline bool operator() (const VertexIndex& lhs, const VertexIndex& rhs) const
     {
-        return lhs.vertex.y <= rhs.vertex.y;
+        return lhs.vertex.y < rhs.vertex.y;
     }
 };
 
@@ -95,7 +96,7 @@ struct CompareZ
 {
     inline bool operator() (const VertexIndex& lhs, const VertexIndex& rhs) const
     {
-        return lhs.vertex.z <= rhs.vertex.z;
+        return lhs.vertex.z < rhs.vertex.z;
     }
 };
 
@@ -119,10 +120,10 @@ struct AABB
 struct BVHNode
 {
     AABB aabb;
-    size_t leftNode;
-    size_t rightNode;
-    size_t indicesOffset;
-    size_t indicesSize;
+    int leftNode;
+    int rightNode;
+    int indicesOffset;
+    int indicesSize;
 };
 
 

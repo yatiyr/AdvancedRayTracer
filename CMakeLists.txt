@@ -55,6 +55,7 @@ set(LIBS glfw3 GL GLU X11 pthread  Xrandr Xi dl assimp STB_IMAGE TINY_XML2 GLAD)
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
+add_compile_options(-O3)
 
 #file(COPY src/shaders DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY outputs DESTINATION ${CMAKE_BINARY_DIR})

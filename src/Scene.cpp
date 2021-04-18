@@ -209,7 +209,7 @@ Scene::Scene(const std::string& filepath)
         mesh.indicesSize = offset;
         stream.clear();
 
-        mesh.rootBVHNode = constructBVH(indicesVec,
+        mesh.rootBVHNode = Utils::constructBVH(indicesVec,
                                         _vertexData,
                                         _BVHIndices,
                                         _BVHNodes,
