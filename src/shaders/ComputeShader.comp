@@ -190,7 +190,7 @@ layout(std430, binding=13) buffer bvhNodes
 
 // ------------------------- DEFINITIONS ------------------------ //
 
-#define MAX_RECURSION_DEPTH 1000
+#define MAX_RECURSION_DEPTH 100
 
 // -------------------------------------------------------------- //
 
@@ -205,6 +205,9 @@ layout(std430, binding=13) buffer bvhNodes
 
 float tmin = 0;
 float tmax = 1000;
+
+BVHNode nodeStack[MAX_RECURSION_DEPTH];
+Ray     rayStack[MAX_RECURSION_DEPTH];
 // -------------------------------------------------------------- //
 
 
@@ -483,6 +486,24 @@ IntersectionReport intersectMesh(Ray r, Mesh mesh)
 	return report;	
 }
 
+IntersectionReport intersectBVH(Ray r, BVHNode rootNode)
+{
+	IntersectionReport report;
+
+	float tMin = FLT_MAX;
+
+	// Initialize stack with root node
+	nodeStack[0] = rootNode;
+	int stackPointer = 1;
+
+	while(stackPointer >= 1)
+	{
+		
+	}
+
+	return report;
+}
+
 IntersectionReport testWorldIntersection(Ray primaryRay)
 {
 	float tMin = FLT_MAX;
@@ -677,7 +698,7 @@ void main()
 
 
 
-		pixel = vec4(BVHNodes[0].aabb.xmax, BVHNodes[0].aabb.xmin, BVHNodes[0].aabb.zmin, 1.0);
+		pixel = vec4(BVHNodes[0].leftNode, BVHNodes[0].rightNode, BVHNodes[0].aabb.zmin, 1.0);
 
 	}
 	
