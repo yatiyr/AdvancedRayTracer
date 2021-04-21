@@ -832,11 +832,11 @@ void main()
 		pixel = vec4(backgroundColor, 1.0);
 	}
 
-	if(true)
-	{
-		vec3 pixel3 = clamp(vec3(1.0 , 1.0 , 1.0) * report.dbg, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0));
-		pixel = vec4(pixel3, 1.0);
-	}	
+	//if(true)
+	//{
+	//	vec3 pixel3 = clamp(vec3(1.0 , 1.0 , 1.0) * report.dbg, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0));
+	//	pixel = vec4(pixel3, 1.0);
+	//}	
 	if(pixelCoords.x == 0 && pixelCoords.y == size.y - 1)
 	{
 

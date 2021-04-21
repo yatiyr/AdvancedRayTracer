@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <set>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <list>
 

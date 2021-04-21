@@ -125,40 +125,20 @@ public:
             {
                 aabb.zmax = cz;
             }                
-        
-            
-    
-/*
-            x.insert(vertexData[indices[i].a -1].pos.x);
-            x.insert(vertexData[indices[i].b -1].pos.x);
-            x.insert(vertexData[indices[i].c -1].pos.x);
-
-            y.insert(vertexData[indices[i].a -1].pos.y);
-            y.insert(vertexData[indices[i].b -1].pos.y);
-            y.insert(vertexData[indices[i].c -1].pos.y);
-
-            z.insert(vertexData[indices[i].a -1].pos.z);
-            z.insert(vertexData[indices[i].b -1].pos.z);
-            z.insert(vertexData[indices[i].c -1].pos.z);  
-
-    */
                                     
         }
-
-        /*
-        aabb.xmin = *(x.begin());
-        aabb.ymin = *(y.begin());
-        aabb.zmin = *(z.begin()); 
-
-        aabb.xmax = *(x.rbegin());
-        aabb.ymax = *(y.rbegin());
-        aabb.zmax = *(z.rbegin());     
-    */
 
         aabb.boxmin = glm::vec3(aabb.xmin, aabb.ymin, aabb.zmin);
         aabb.boxmax = glm::vec3(aabb.xmax, aabb.ymax, aabb.zmax);
         return aabb;
         
+    }
+
+    static float giveAABBVolume(AABB aabb)
+    {
+        return (aabb.xmax - aabb.xmin) *
+               (aabb.ymax - aabb.ymin) *
+               (aabb.zmax - aabb.zmin);
     }
 
     static glm::vec3 giveTriangleCenter(Indices face, const std::vector<Vertex>& vertexData)
@@ -222,13 +202,15 @@ public:
 
     }
 
-    static SplittedIndices splitMidpoint(const std::vector<Indices>& indices, const std::vector<Vertex>& vertexData, int axis)
+    static SplittedIndices splitSAH(const std::vector<Indices>& indices, const std::vector<Vertex>& vertexData, int axis)
     {
         SplittedIndices splittedResult;
 
         std::vector<VertexIndex> vivec;
 
         float medianVal = 0;
+
+        std::array<float, 8> costs;
 
         for(size_t i=0; i<indices.size(); i++)
         {

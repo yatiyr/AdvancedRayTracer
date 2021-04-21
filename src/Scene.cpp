@@ -218,7 +218,7 @@ Scene::Scene(const std::string& filepath)
                             nodeCounter,
                             indexCounter,
                             0,
-                            MAX_DEPTH,
+                            8,
                             0);
 
         mesh.rootOffset = totalNode;
