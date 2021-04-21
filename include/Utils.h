@@ -227,8 +227,7 @@ public:
                             int& nodeCounter,
                             int depth,
                             int maxDepth,
-                            int axis,
-                            int offset)
+                            int axis)
     {
         BVHNode node;
         node.aabb = computeAABB(indices, vertexData);
@@ -256,15 +255,16 @@ public:
         node.indicesSize = 0;
         node.indicesOffset = 0;
         BVHNodes.push_back(node);
+        int vecsize = BVHNodes.size();
         nodeCounter++;
 
         int totalNode = 1 + constructBVH(si.p1, vertexData, BVHIndices, BVHNodes,
-                            indexCounter, nodeCounter, depth + 1, maxDepth, (axis + 1)%3, offset + 1)
+                            indexCounter, nodeCounter, depth + 1, maxDepth, (axis + 1)%3)
                             +
                             constructBVH(si.p2, vertexData, BVHIndices, BVHNodes,
-                            indexCounter, nodeCounter, depth + 1, maxDepth, (axis + 1)%3, offset + 1);
+                            indexCounter, nodeCounter, depth + 1, maxDepth, (axis + 1)%3);
 
-        BVHNodes[offset].childSize = totalNode;
+        BVHNodes[vecsize - 1].childSize = totalNode;
                                       
         return totalNode;
 

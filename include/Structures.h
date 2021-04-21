@@ -58,6 +58,8 @@ struct Mesh
     int indicesOffset;
     int indicesSize;
     int rootBVHNode;
+    int rootOffset;
+    int nodeSize;
 };
 
 

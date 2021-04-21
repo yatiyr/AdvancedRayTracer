@@ -185,6 +185,8 @@ Scene::Scene(const std::string& filepath)
     int indexCounter = 0;
 
     int offset = 0;
+    int totalNode = 0;
+    int bvhRootOffset = 0;
     while(element)
     {
         child = element->FirstChildElement("Material");
@@ -209,7 +211,7 @@ Scene::Scene(const std::string& filepath)
         mesh.indicesSize = offset;
         stream.clear();
 
-        int totalNode = Utils::constructBVH(indicesVec,
+        int localTotalNode = Utils::constructBVH(indicesVec,
                             _vertexData,
                             _BVHIndices,
                             _BVHNodes,
@@ -217,8 +219,14 @@ Scene::Scene(const std::string& filepath)
                             indexCounter,
                             0,
                             MAX_DEPTH,
-                            0,
                             0);
+
+        mesh.rootOffset = totalNode;
+        mesh.nodeSize   = localTotalNode;
+        
+        totalNode += localTotalNode;
+
+
 
         _meshes.push_back(mesh);
         element = element->NextSiblingElement("Mesh");
