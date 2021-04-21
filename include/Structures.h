@@ -117,6 +117,9 @@ struct AABB
     float xmin;
     float ymin;
     float zmin;
+
+    alignas(16) glm::vec3 boxmin;
+    alignas(16) glm::vec3 boxmax;
 };
 
 struct BVHNode

@@ -71,6 +71,7 @@ struct Ray
 {
 	vec3 origin;
 	vec3 direction;
+	vec3 rcp;
 };
 
 struct IntersectionReport
@@ -85,7 +86,7 @@ struct IntersectionReport
 
 struct BoxReport
 {
-	int id;
+	bool id;
 	vec3 point;
 	int dbg;
 };
@@ -98,6 +99,9 @@ struct AABB
 	float xmin;
 	float ymin;
 	float zmin;
+
+	vec3 boxmin;
+	vec3 boxmax;
 };
 
 struct BVHNode
@@ -235,6 +239,7 @@ Ray computePrimaryRay(ivec2 pixelCoords)
 	float sv = (pixelCoords.y + 0.5) * (camera.nearPlane.w - camera.nearPlane.z) / camera.imageResolution.y;
 
 	x.direction = normalize((q + su*camera.v - sv*camera.up) - x.origin);
+	x.rcp = inversesqrt(x.direction);
 	return x;
 }
 
@@ -278,8 +283,47 @@ IntersectionReport intersectSphere(Ray r, Sphere s, float tmin, float tmax)
 	return report;
 }
 
+bool improvedBoxIntersect(Ray r, AABB box, float tmin, float tmax)
+{
 
-BoxReport intersectBox(Ray r, AABB box, float tmin, float tmax)
+	vec3 t0s = (box.boxmin - r.origin) * r.rcp;
+  	vec3 t1s = (box.boxmax - r.origin) * r.rcp;
+    
+  	vec3 tsmaller = min(t0s, t1s);
+    vec3 tbigger  = max(t0s, t1s);
+    
+    tmin = max(tmin, max(tsmaller[0], max(tsmaller[1], tsmaller[2])));
+    tmax = min(tmax, min(tbigger[0], min(tbigger[1], tbigger[2])));
+
+	return (tmin < tmax);
+}
+
+bool optIntersectBox(Ray r, AABB box, float tmin, float tmax)
+{
+
+	float t1 = (box.xmin - r.origin.x)*r.rcp.x;
+	float t2 = (box.xmax - r.origin.x)*r.rcp.x;
+
+	float tMin = min(t1, t2);
+	float tMax = max(t1, t2);
+
+	t1 = (box.ymin - r.origin.y)*r.rcp.y;
+	t2 = (box.ymax - r.origin.y)*r.rcp.y;
+
+	tMin = max(tMin, min(t1, t2));
+	tMax = min(tMax, max(t1, t2));
+
+	t1 = (box.zmin - r.origin.z)*r.rcp.z;
+	t2 = (box.zmax - r.origin.z)*r.rcp.z;
+
+	tMin = max(tMin, min(t1, t2));
+	tMax = min(tMax, max(t1, t2));	
+
+	return tmax > max(tMin, 0.0);
+
+}
+
+bool intersectBox(Ray r, AABB box, float tmin, float tmax)
 {
 
 	BoxReport rprt;
@@ -329,23 +373,19 @@ BoxReport intersectBox(Ray r, AABB box, float tmin, float tmax)
 
 	if(t1max > t2min)
 	{	
-		rprt.id = -1;
-		return rprt;
+		return false;
 	}
 	else if(t1max < t2min)
 	{
-		rprt.id = 1;
-		return rprt;
+		return true;
 	}
 	else if(t1max == t2min)
 	{
-		rprt.id = 1;
-		return rprt;
+		return true;
 	}
 	else
 	{
-		rprt.id = -1;
-		return rprt;
+		return false;
 	}
 
 }
@@ -461,9 +501,9 @@ IntersectionReport intersectMesh(Ray r, Mesh mesh)
 	report.d = tMin;	
 	report.materialId = mesh.materialId;
 
-	BoxReport aabbIntersect = intersectBox(r, BVHNodes[mesh.rootBVHNode].aabb, tmin, tmax);
+	bool aabbIntersect = optIntersectBox(r, BVHNodes[mesh.rootBVHNode].aabb, tmin, tmax);
 
-	if(aabbIntersect.id == 1)
+	if(aabbIntersect == true)
 	{
 		report.dbg = 0;
 		for(uint i= mesh.indicesOffset; i<mesh.indicesSize; i++)
@@ -480,7 +520,7 @@ IntersectionReport intersectMesh(Ray r, Mesh mesh)
 		}
 	}
 
-	else if(aabbIntersect.id == 0)
+	else if(aabbIntersect == false)
 	{
 		report.dbg = 1;
 		report.d = 1000;
@@ -508,10 +548,10 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 		if(nodeIndex != nodeIndexNext)
 			continue;
 
-		BoxReport nodeIntersection = intersectBox(r, BVHNodes[nodeIndex].aabb, tmin, tmax);
+		bool nodeIntersection = intersectBox(r, BVHNodes[nodeIndex].aabb, tmin, tmax);
 		bool isLeaf = BVHNodes[nodeIndex].childSize == 1;
 
-		if(nodeIntersection.id == 1)
+		if(nodeIntersection == true)
 		{
 			nodeIndexNext += 1; 
 		}
@@ -520,7 +560,7 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 			nodeIndexNext += BVHNodes[nodeIndex].childSize;
 		}
 
-		if(nodeIntersection.id == 1 && isLeaf)
+		if(nodeIntersection == true && isLeaf)
 		{
 			int offset       = BVHNodes[nodeIndex].indicesOffset;
 			int offsetSize   = offset +  BVHNodes[nodeIndex].indicesSize;
@@ -567,10 +607,10 @@ IntersectionReport intersectBVH(Ray r, Mesh mesh)
 		current = nodeStack[stackPointer];
 
 		// Test for intersection with bounding box
-		BoxReport aabbIntersect = intersectBox(r, current.aabb, tmin, tmax);
+		bool aabbIntersect = intersectBox(r, current.aabb, tmin, tmax);
 
 		// If ray intersects the box, we need to push left and right children to stack
-		if(aabbIntersect.id == 1)
+		if(aabbIntersect == true)
 		{			
 			// If it is a leaf
 			if(current.leftNode == -1)

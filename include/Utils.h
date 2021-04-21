@@ -154,6 +154,9 @@ public:
         aabb.ymax = *(y.rbegin());
         aabb.zmax = *(z.rbegin());     
     */
+
+        aabb.boxmin = glm::vec3(aabb.xmin, aabb.ymin, aabb.zmin);
+        aabb.boxmax = glm::vec3(aabb.xmax, aabb.ymax, aabb.zmax);
         return aabb;
         
     }
