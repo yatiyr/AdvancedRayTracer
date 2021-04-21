@@ -124,6 +124,7 @@ struct BVHNode
     int rightNode;
     int indicesOffset;
     int indicesSize;
+    int childSize;
 };
 
 

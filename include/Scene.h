@@ -47,6 +47,7 @@ public:
     GLuint ssbo_meshIndices;
     GLuint ssbo_meshNormals;
       
+    GLuint ssbo_BVHNormals;
     GLuint ssbo_BVHIndices;
     GLuint ssbo_BVHNodes;
 
@@ -61,6 +62,7 @@ public:
 
     std::vector<Indices> _BVHIndices;
     std::vector<BVHNode> _BVHNodes;
+    std::vector<Vertex> _BVHNormals;    
 
 
     // all indices of all meshes in the scene are

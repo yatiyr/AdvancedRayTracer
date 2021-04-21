@@ -223,11 +223,12 @@ public:
                             const std::vector<Vertex>& vertexData,
                             std::vector<Indices>& BVHIndices,
                             std::vector<BVHNode>& BVHNodes,
-                            int& nodeCounter,
                             int& indexCounter,
+                            int& nodeCounter,
                             int depth,
                             int maxDepth,
-                            int axis)
+                            int axis,
+                            int offset)
     {
         BVHNode node;
         node.aabb = computeAABB(indices, vertexData);
@@ -242,42 +243,30 @@ public:
             node.indicesSize   = indices.size();
             node.leftNode = -1;
             node.rightNode = -1;
+            node.childSize = 1;
             BVHNodes.push_back(node);
             nodeCounter++;
             indexCounter += indices.size();
 
-            return (nodeCounter - 1);
+            return 1;
         }
 
         SplittedIndices si = split(indices, vertexData, axis);
         
-
-        node.leftNode      = constructBVH(si.p1,
-                                        vertexData,
-                                        BVHIndices,
-                                        BVHNodes,
-                                        nodeCounter,
-                                        indexCounter,
-                                        depth + 1,
-                                        maxDepth,
-                                        (axis + 1)%3);
-        
- 
-        node.rightNode      = constructBVH(si.p2,
-                                        vertexData,
-                                        BVHIndices,
-                                        BVHNodes,
-                                        nodeCounter,
-                                        indexCounter,
-                                        depth+1,
-                                        maxDepth,
-                                        (axis + 1)%3);
-                                      
         node.indicesSize = 0;
         node.indicesOffset = 0;
         BVHNodes.push_back(node);
         nodeCounter++;
-        return (nodeCounter - 1);
+
+        int totalNode = 1 + constructBVH(si.p1, vertexData, BVHIndices, BVHNodes,
+                            indexCounter, nodeCounter, depth + 1, maxDepth, (axis + 1)%3, offset + 1)
+                            +
+                            constructBVH(si.p2, vertexData, BVHIndices, BVHNodes,
+                            indexCounter, nodeCounter, depth + 1, maxDepth, (axis + 1)%3, offset + 1);
+
+        BVHNodes[offset].childSize = totalNode;
+                                      
+        return totalNode;
 
     }
 };

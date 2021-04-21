@@ -209,15 +209,16 @@ Scene::Scene(const std::string& filepath)
         mesh.indicesSize = offset;
         stream.clear();
 
-        mesh.rootBVHNode = Utils::constructBVH(indicesVec,
-                                        _vertexData,
-                                        _BVHIndices,
-                                        _BVHNodes,
-                                        nodeCounter,
-                                        indexCounter,
-                                        0,
-                                        MAX_DEPTH,
-                                        0);
+        int totalNode = Utils::constructBVH(indicesVec,
+                            _vertexData,
+                            _BVHIndices,
+                            _BVHNodes,
+                            nodeCounter,
+                            indexCounter,
+                            0,
+                            MAX_DEPTH,
+                            0,
+                            0);
 
         _meshes.push_back(mesh);
         element = element->NextSiblingElement("Mesh");
@@ -289,6 +290,22 @@ void Scene::ComputeFaceNormals()
 
         _meshNormals.push_back(normalElement);
     }
+
+    for(size_t i=0; i<_BVHIndices.size(); i++)
+    {
+        Indices faceIndices = _BVHIndices[i];
+        Vertex normalElement;
+        glm::vec3 a = _vertexData[faceIndices.a-1].pos;
+        glm::vec3 b = _vertexData[faceIndices.b-1].pos;
+        glm::vec3 c = _vertexData[faceIndices.c-1].pos;
+
+        glm::vec3 normal = glm::cross((b-a),(c-a));
+        normal = glm::normalize(normal);
+        normalElement.pos = normal;
+
+        _BVHNormals.push_back(normalElement);
+    }
+
 }
 
 
@@ -359,20 +376,27 @@ void Scene::BindObjectsToGPU()
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_meshNormals);
     glBufferData(GL_SHADER_STORAGE_BUFFER, _meshNormals.size() * sizeof(Vertex), _meshNormals.data(), GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, ssbo_meshNormals);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); 
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    // Bind mesh normals array   
+    glGenBuffers(1, &ssbo_BVHNormals);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHNormals);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHNormals.size() * sizeof(Vertex), _BVHNormals.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 12, ssbo_BVHNormals);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);    
 
     // Bind mesh normals array   
     glGenBuffers(1, &ssbo_BVHIndices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHIndices);
     glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHIndices.size() * sizeof(Indices), _BVHIndices.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 12, ssbo_BVHIndices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 13, ssbo_BVHIndices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); 
 
     // Bind mesh normals array   
     glGenBuffers(1, &ssbo_BVHNodes);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHNodes);
     glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHNodes.size() * sizeof(BVHNode), _BVHNodes.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 13, ssbo_BVHNodes);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 14, ssbo_BVHNodes);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);       
 
 }

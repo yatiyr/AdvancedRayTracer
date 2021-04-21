@@ -104,6 +104,7 @@ struct BVHNode
 	int rightNode;
 	int indicesOffset;
 	int indicesSize;
+	int childSize;
 };
 
 // -------------------------------------------------------------- //
@@ -176,12 +177,17 @@ layout(std430, binding=11) buffer mshNormals
 	Vertex meshNormals[];
 };
 
-layout(std430, binding=12) buffer bvhIndices
+layout(std430, binding=12) buffer bvhNormals
+{
+	Vertex BVHNormals[];
+};
+
+layout(std430, binding=13) buffer bvhIndices
 {
 	Indices BVHIndices[];
 };
 
-layout(std430, binding=13) buffer bvhNodes
+layout(std430, binding=14) buffer bvhNodes
 {
 	BVHNode BVHNodes[];
 };
@@ -190,7 +196,7 @@ layout(std430, binding=13) buffer bvhNodes
 
 // ------------------------- DEFINITIONS ------------------------ //
 
-#define MAX_RECURSION_DEPTH 100
+#define MAX_RECURSION_DEPTH 200
 
 // -------------------------------------------------------------- //
 
@@ -205,7 +211,7 @@ layout(std430, binding=13) buffer bvhNodes
 
 float tmin = 0;
 float tmax = 1000;
-
+float yes = 0;
 BVHNode nodeStack[MAX_RECURSION_DEPTH];
 Ray     rayStack[MAX_RECURSION_DEPTH];
 // -------------------------------------------------------------- //
@@ -325,11 +331,7 @@ BoxReport intersectBox(Ray r, AABB box, float tmin, float tmax)
 	}
 	else if(t1max < t2min)
 	{
-		float dist = distance(r.origin + t1max*r.direction, r.origin + t2min*r.direction);
-		if(dist < 0.06)
-			rprt.id = 0;
-		else
-			rprt.id = 1;
+		rprt.id = 1;
 		return rprt;
 	}
 	else if(t1max == t2min)
@@ -486,19 +488,133 @@ IntersectionReport intersectMesh(Ray r, Mesh mesh)
 	return report;	
 }
 
-IntersectionReport intersectBVH(Ray r, BVHNode rootNode)
+/*
+BoxReport intersectBox(Ray r, AABB box, float tmin, float tmax)
 {
-	IntersectionReport report;
 
+	BoxReport rprt;
+
+	float t1x = (box.xmin - r.origin.x) / r.direction.x;
+	float t2x = (box.xmax - r.origin.x) / r.direction.x;
+
+	if(t1x > t2x)
+	{
+		float tmp = t1x;
+		t1x = t2x;
+		t2x = tmp;
+	}
+
+	float t1y = (box.ymin - r.origin.y) / r.direction.y, tmin, tmax;
+	float t2y = (box.ymax - r.origin.y) / r.direction.y, tmin, tmax;
+
+	if(t1y > t2y)
+	{
+		float tmp = t1y;
+		t1y = t2y;
+		t2y = tmp;
+	}
+
+	float t1z = (box.zmin - r.origin.z) / r.direction.z;
+	float t2z = (box.zmax - r.origin.z) / r.direction.z;
+
+	if(t1z > t2z)
+	{
+		float tmp = t1z;
+		t1z = t2z;
+		t2z = tmp;
+	}
+
+	float t1max = t1x;
+	float t2min = t2x;
+
+	if(t1max < t1y)
+		t1max = t1y;
+	if(t1max < t1z)
+		t1max = t1z;
+
+	if(t2min > t2y)
+		t2min = t2y;
+	if(t2min > t2z)
+		t2min = t2z;
+
+	if(t1max > t2min)
+	{	
+		rprt.id = -1;
+		return rprt;
+	}
+	else if(t1max < t2min)
+	{
+		rprt.id = 1;
+		return rprt;
+	}
+	else if(t1max == t2min)
+	{
+		rprt.id = 1;
+		return rprt;
+	}
+	else
+	{
+		rprt.id = -1;
+		return rprt;
+	}
+
+} */
+
+IntersectionReport intersectBVH(Ray r, Mesh mesh)
+{
 	float tMin = FLT_MAX;
+
+	IntersectionReport report;
+	report.dbg = 0;	
+	report.intersection = vec3(FLT_MAX);
+	report.d = tMin;	
+	report.materialId = mesh.materialId;	
+
+	BVHNode rootNode = BVHNodes[mesh.rootBVHNode];
 
 	// Initialize stack with root node
 	nodeStack[0] = rootNode;
+	BVHNode current = nodeStack[0];
 	int stackPointer = 1;
-
 	while(stackPointer >= 1)
 	{
-		
+		// Pop the stack
+		stackPointer--;
+		current = nodeStack[stackPointer];
+
+		// Test for intersection with bounding box
+		BoxReport aabbIntersect = intersectBox(r, current.aabb, tmin, tmax);
+
+		// If ray intersects the box, we need to push left and right children to stack
+		if(aabbIntersect.id == 1)
+		{			
+			// If it is a leaf
+			if(current.leftNode == -1)
+			{
+
+				IntersectionReport rprt = intersectFace(r, BVHIndices[current.indicesOffset], tmin, tmax);
+
+				if(rprt.d < tMin)
+				{
+					report.intersection = rprt.intersection;
+					report.normal = BVHNormals[current.indicesOffset].pos;
+					report.d = rprt.d;
+					tMin = report.d;
+				}
+				
+							
+
+			}
+			else if(current.leftNode != -1)
+			{				
+				nodeStack[stackPointer] = BVHNodes[current.rightNode];
+				stackPointer++;
+				nodeStack[stackPointer] = BVHNodes[current.leftNode];				
+				stackPointer++;
+
+			}
+		}
+
 	}
 
 	return report;
@@ -514,7 +630,7 @@ IntersectionReport testWorldIntersection(Ray primaryRay)
 	
 	for(uint i=0; i<meshCount; i++)
 	{
-		IntersectionReport r = intersectMesh(primaryRay, meshes[i]);
+		IntersectionReport r = intersectBVH(primaryRay, meshes[i]);
 		if(r.d < tMin)
 		{
 			report = r;
@@ -562,7 +678,7 @@ bool shadowRayIntersection(Ray ray, float dist)
 
 	for(uint i=0; i<meshCount; i++)
 	{
-		IntersectionReport r = intersectMesh(ray, meshes[i]);
+		IntersectionReport r = intersectBVH(ray, meshes[i]);
 		if(r.d < dist)
 		{
 			return true;
@@ -698,7 +814,7 @@ void main()
 
 
 
-		pixel = vec4(BVHNodes[0].leftNode, BVHNodes[0].rightNode, BVHNodes[0].aabb.zmin, 1.0);
+		pixel = vec4(yes, BVHNodes[2].leftNode, BVHNodes[0].aabb.zmin, 1.0);
 
 	}
 	
