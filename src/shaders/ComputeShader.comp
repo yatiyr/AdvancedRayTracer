@@ -81,7 +81,7 @@ struct IntersectionReport
 	float d;
 	int materialId;
 
-	int dbg;
+	float dbg;
 };
 
 struct BoxReport
@@ -551,9 +551,12 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 		bool nodeIntersection = intersectBox(r, BVHNodes[nodeIndex].aabb, tmin, tmax);
 		bool isLeaf = BVHNodes[nodeIndex].childSize == 1;
 
+		report.dbg += 0.004;
+
 		if(nodeIntersection == true)
 		{
-			nodeIndexNext += 1; 
+			nodeIndexNext += 1;
+
 		}
 		else
 		{
@@ -568,7 +571,7 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 			for(int j = offset; j < offsetSize; j++)
 			{
 				IntersectionReport rprt = intersectFace(r, BVHIndices[j], tmin, tmax);
-
+				report.dbg += 0.008;				
 				if(rprt.d < tMin)
 				{
 					report.intersection = rprt.intersection;
@@ -650,7 +653,7 @@ IntersectionReport testWorldIntersection(Ray primaryRay)
 	IntersectionReport report;
 	report.intersection = vec3(FLT_MAX);
 	report.d = FLT_MAX;	
-
+	report.dbg == 1;
 	
 	for(uint i=0; i<meshCount; i++)
 	{
@@ -659,8 +662,6 @@ IntersectionReport testWorldIntersection(Ray primaryRay)
 		{
 			report = r;
 			tMin = r.d;
-			if(r.dbg == 1)
-				report.dbg = 1;
 		}
 	}
 	
@@ -825,14 +826,17 @@ void main()
 	{
 		pixel = vec4(computeFinalColor(report, primaryRay), 1.0);
 
-		if(report.dbg == 1)
-			pixel = vec4(0.5, 0.0, 1.0, 1.0);
 	}
 	else
 	{
 		pixel = vec4(backgroundColor, 1.0);
 	}
-	
+
+	if(true)
+	{
+		vec3 pixel3 = clamp(vec3(1.0 , 1.0 , 1.0) * report.dbg, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0));
+		pixel = vec4(pixel3, 1.0);
+	}	
 	if(pixelCoords.x == 0 && pixelCoords.y == size.y - 1)
 	{
 

@@ -172,7 +172,7 @@ public:
         return result;
     }
 
-    static SplittedIndices split(const std::vector<Indices>& indices, const std::vector<Vertex>& vertexData, int axis)
+    static SplittedIndices splitEqual(const std::vector<Indices>& indices, const std::vector<Vertex>& vertexData, int axis)
     {
 
         SplittedIndices splittedResult;
@@ -222,6 +222,41 @@ public:
 
     }
 
+    static SplittedIndices splitMidpoint(const std::vector<Indices>& indices, const std::vector<Vertex>& vertexData, int axis)
+    {
+        SplittedIndices splittedResult;
+
+        std::vector<VertexIndex> vivec;
+
+        float medianVal = 0;
+
+        for(size_t i=0; i<indices.size(); i++)
+        {
+            glm::vec3 v = giveTriangleCenter(indices[i], vertexData);
+
+            VertexIndex vi;
+            vi.vertex = v;
+            vi.index  = i;
+            vivec.push_back(vi);
+
+        }
+
+        if(axis == 0)
+        {
+            std::sort(vivec.begin(), vivec.end(), CompareX());
+        }
+        else if(axis == 1)
+        {
+            std::sort(vivec.begin(), vivec.end(), CompareY());
+        }
+        else if(axis == 2)
+        {
+            std::sort(vivec.begin(), vivec.end(), CompareZ());
+        }
+
+        return splittedResult;        
+    }
+
     static int constructBVH(const std::vector<Indices>& indices,
                             const std::vector<Vertex>& vertexData,
                             std::vector<Indices>& BVHIndices,
@@ -234,7 +269,7 @@ public:
     {
         BVHNode node;
         node.aabb = computeAABB(indices, vertexData);
-        if(depth == maxDepth || indices.size() == 1)
+        if(depth == maxDepth || indices.size() == 1 || indices.size() == 0)
         {
             for(size_t i=0; i<indices.size(); i++)
             {
@@ -253,7 +288,7 @@ public:
             return 1;
         }
 
-        SplittedIndices si = split(indices, vertexData, axis);
+        SplittedIndices si = splitEqual(indices, vertexData, axis);
         
         node.indicesSize = 0;
         node.indicesOffset = 0;
