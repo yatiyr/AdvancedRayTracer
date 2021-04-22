@@ -202,6 +202,79 @@ public:
 
     }
 
+    static SplittedIndices splitMidpoint(const std::vector<Indices>& indices, const std::vector<Vertex>& vertexData, int axis)
+    {
+
+        SplittedIndices splittedResult;        
+        AABB box = computeAABB(indices, vertexData);
+
+        float xlength = box.xmax - box.xmin;
+        float ylength = box.ymax - box.ymin;
+        float zlength = box.zmax - box.zmin;
+
+        glm::vec3 totalVec(0.0, 0.0, 0.0);
+        std::vector<VertexIndex> vivec;
+
+        for(int i=0; i<indices.size(); i++)
+        {
+            glm::vec3 v = giveTriangleCenter(indices[i], vertexData);
+            totalVec += v;
+
+            VertexIndex vi;
+            vi.vertex = v;
+            vi.index  = i;
+            vivec.push_back(vi);
+
+        }
+
+        totalVec /= indices.size();
+
+        if(xlength >= ylength && xlength >= zlength)
+        {
+            for(int i=0; i<vivec.size(); i++)
+            {
+                if(vivec[i].vertex.x <= totalVec.x)
+                {
+                    splittedResult.p1.push_back(indices[vivec[i].index]);
+                }
+                else
+                {
+                    splittedResult.p2.push_back(indices[vivec[i].index]);
+                }
+            }
+        }
+        else if(ylength >= xlength && ylength >= zlength)
+        {
+            for(int i=0; i<vivec.size(); i++)
+            {
+                if(vivec[i].vertex.y <= totalVec.y)
+                {
+                    splittedResult.p1.push_back(indices[vivec[i].index]);
+                }
+                else
+                {
+                    splittedResult.p2.push_back(indices[vivec[i].index]);
+                }
+            }
+        }
+        else if(zlength >= ylength && zlength >= xlength)
+        {
+            for(int i=0; i<vivec.size(); i++)
+            {
+                if(vivec[i].vertex.z <= totalVec.z)
+                {
+                    splittedResult.p1.push_back(indices[vivec[i].index]);
+                }
+                else
+                {
+                    splittedResult.p2.push_back(indices[vivec[i].index]);
+                }
+            }
+        }
+
+        return splittedResult;
+    }
+
     static SplittedIndices splitSAH(const std::vector<Indices>& indices, const std::vector<Vertex>& vertexData, int axis)
     {
         SplittedIndices splittedResult;
@@ -211,6 +284,10 @@ public:
         float medianVal = 0;
 
         std::array<float, 8> costs;
+
+        float bestBucket = 0;
+        int bestSplitAxis = 0;
+        float bestCost = FLT_MAX;
 
         for(size_t i=0; i<indices.size(); i++)
         {
@@ -223,17 +300,167 @@ public:
 
         }
 
-        if(axis == 0)
+
+        std::sort(vivec.begin(), vivec.end(), CompareX());
+        float xrange = vivec[vivec.size() - 1].vertex.x - vivec[0].vertex.x;
+        float bucketSize = xrange/8;
+
+        for(int i=0; i<7; i++)
         {
-            std::sort(vivec.begin(), vivec.end(), CompareX());
+            float val = vivec[0].vertex.x + bucketSize*(i+1);
+
+            std::vector<Indices> p1;
+            std::vector<Indices> p2;
+
+            for(int j=0; j<vivec.size(); j++)
+            {
+                if(vivec[j].vertex.x <= val)
+                {
+                    p1.push_back(indices[vivec[j].index]);
+                }
+                else
+                {
+                    p2.push_back(indices[vivec[j].index]);
+                }
+            }
+
+            if(!p1.empty() && !p2.empty())
+            {
+                float cost = giveAABBVolume(computeAABB(p1, vertexData)) + giveAABBVolume(computeAABB(p2, vertexData));
+
+                if(cost < bestCost)
+                {
+                    bestCost = cost;
+                    bestSplitAxis = 0;
+                    bestBucket = val;
+                 }
+            }
+
         }
-        else if(axis == 1)
+        
+
+        std::sort(vivec.begin(), vivec.end(), CompareY());
+        float yrange = vivec[vivec.size() - 1].vertex.y - vivec[0].vertex.y;
+        bucketSize = yrange/8;
+
+        for(int i=0; i<7; i++)
         {
-            std::sort(vivec.begin(), vivec.end(), CompareY());
-        }
-        else if(axis == 2)
+            float val = vivec[0].vertex.y + bucketSize*(i+1);
+
+            std::vector<Indices> p1;
+            std::vector<Indices> p2;
+
+            for(int j=0; j<vivec.size(); j++)
+            {
+                if(vivec[j].vertex.y <= val)
+                {
+                    p1.push_back(indices[vivec[j].index]);
+                }
+                else
+                {
+                    p2.push_back(indices[vivec[j].index]);
+                }
+            }
+
+            if(!p1.empty() && !p2.empty())
+            {
+                float cost = giveAABBVolume(computeAABB(p1, vertexData)) + giveAABBVolume(computeAABB(p2, vertexData));
+
+                if(cost < bestCost)
+                {
+                    bestCost = cost;
+                    bestSplitAxis = 1;
+                    bestBucket = val;
+                }
+            }
+
+        }            
+
+
+        std::sort(vivec.begin(), vivec.end(), CompareZ());
+        float zrange = vivec[vivec.size() - 1].vertex.z - vivec[0].vertex.z;
+        bucketSize = zrange/8;
+
+        for(int i=0; i<7; i++)
         {
-            std::sort(vivec.begin(), vivec.end(), CompareZ());
+            float val = vivec[0].vertex.z + bucketSize*(i+1);
+
+            std::vector<Indices> p1;
+            std::vector<Indices> p2;
+
+            for(int j=0; j<vivec.size(); j++)
+            {
+                if(vivec[j].vertex.z <= val)
+                {
+                    p1.push_back(indices[vivec[j].index]);
+                }
+                else
+                {
+                    p2.push_back(indices[vivec[j].index]);
+                }
+            }
+
+            if(!p1.empty() && !p2.empty())
+            {
+                float cost = giveAABBVolume(computeAABB(p1, vertexData)) + giveAABBVolume(computeAABB(p2, vertexData));
+
+                if(cost < bestCost)
+                {
+                    bestCost = cost;
+                    bestSplitAxis = 2;
+                    bestBucket = val;
+                }
+            }
+
+        }             
+        
+
+
+        if(bestCost != FLT_MAX)
+        {
+            if(bestSplitAxis == 0)
+                std::sort(vivec.begin(), vivec.end(), CompareX());
+            else if(bestSplitAxis == 1)
+                std::sort(vivec.begin(), vivec.end(), CompareY());
+            else if(bestSplitAxis == 2)
+                std::sort(vivec.begin(), vivec.end(), CompareZ());
+
+            for(int i=0; i<vivec.size(); i++)
+            {
+                if(bestSplitAxis == 0)
+                {
+                    if(vivec[i].vertex.x <= bestBucket)
+                    {
+                        splittedResult.p1.push_back(indices[vivec[i].index]);
+                    }
+                    else
+                    {
+                        splittedResult.p2.push_back(indices[vivec[i].index]);
+                    }
+                }
+                else if(bestSplitAxis == 1)
+                {
+                    if(vivec[i].vertex.y <= bestBucket)
+                    {
+                        splittedResult.p1.push_back(indices[vivec[i].index]);
+                    }
+                    else
+                    {
+                        splittedResult.p2.push_back(indices[vivec[i].index]);
+                    }
+                }
+                else if(bestSplitAxis == 2)
+                {
+                    if(vivec[i].vertex.z <= bestBucket)
+                    {
+                        splittedResult.p1.push_back(indices[vivec[i].index]);
+                    }
+                    else
+                    {
+                        splittedResult.p2.push_back(indices[vivec[i].index]);
+                    }
+                }
+            }
         }
 
         return splittedResult;        
@@ -251,7 +478,7 @@ public:
     {
         BVHNode node;
         node.aabb = computeAABB(indices, vertexData);
-        if(depth == maxDepth || indices.size() == 1 || indices.size() == 0)
+        if(depth == maxDepth || indices.size() <= 32)
         {
             for(size_t i=0; i<indices.size(); i++)
             {
@@ -270,13 +497,30 @@ public:
             return 1;
         }
 
-        SplittedIndices si = splitEqual(indices, vertexData, axis);
+        SplittedIndices si = splitSAH(indices, vertexData, axis);
         
         node.indicesSize = 0;
         node.indicesOffset = 0;
         BVHNodes.push_back(node);
         int vecsize = BVHNodes.size();
         nodeCounter++;
+
+        if(si.p1.empty() || si.p2.empty())
+        {
+            for(size_t i=0; i<indices.size(); i++)
+            {
+                BVHIndices.push_back(indices[i]);
+            }
+
+            node.indicesOffset = indexCounter;
+            node.indicesSize   = indices.size();
+            node.leftNode = -1;
+            node.rightNode = -1;
+            node.childSize = 1;
+            indexCounter += indices.size();
+
+            return 1;
+        }
 
         int totalNode = 1 + constructBVH(si.p1, vertexData, BVHIndices, BVHNodes,
                             indexCounter, nodeCounter, depth + 1, maxDepth, (axis + 1)%3)

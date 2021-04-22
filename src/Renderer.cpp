@@ -332,19 +332,19 @@ void Renderer::OneTimeRender()
         GLuint fbo;
         glGenFramebuffers(1, &fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _textureHandle, 0);        
-        pixels = (float *)malloc(_width*_height* 4 * sizeof(float));
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
-        glReadPixels(0, 0, _width, _height, GL_RGBA, GL_FLOAT, pixels);   
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _textureHandle, 0);             
+
+        std::cout << "Image rendered in --->";
+    }
+        glReadBuffer(GL_COLOR_ATTACHMENT0);   
+        pixels = (float *)malloc(_width*_height* 4 * sizeof(float));        
+        glReadPixels(0, 0, _width, _height, GL_RGBA, GL_FLOAT, pixels); 
 
         result = FloatToUint8(pixels);
 
         stbi_flip_vertically_on_write(true);
         std::string outputPath = "outputs/" + _sceneManager.GetScene(0)._imageName;
-        stbi_write_png(outputPath.c_str(),_width, _height, 3, result, _width * 3);        
-
-        std::cout << "Image rendered in --->";
-    }
+        stbi_write_png(outputPath.c_str(),_width, _height, 3, result, _width * 3);      
 
         // I was using it for debugging compute shader
         std::cout << pixels[0] << " " << pixels[1] << " " << pixels[2] << " " << pixels[3] << '\n';

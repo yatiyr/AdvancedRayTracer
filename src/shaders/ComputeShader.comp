@@ -551,8 +551,6 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 		bool nodeIntersection = intersectBox(r, BVHNodes[nodeIndex].aabb, tmin, tmax);
 		bool isLeaf = BVHNodes[nodeIndex].childSize == 1;
 
-		report.dbg += 0.004;
-
 		if(nodeIntersection == true)
 		{
 			nodeIndexNext += 1;
@@ -570,8 +568,7 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 
 			for(int j = offset; j < offsetSize; j++)
 			{
-				IntersectionReport rprt = intersectFace(r, BVHIndices[j], tmin, tmax);
-				report.dbg += 0.008;				
+				IntersectionReport rprt = MollerTrumboreIntersection(r, BVHIndices[j], tmin, tmax);				
 				if(rprt.d < tMin)
 				{
 					report.intersection = rprt.intersection;
