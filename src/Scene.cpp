@@ -37,7 +37,7 @@ Scene::Scene(const std::string& filepath)
     }
     else
     {
-        stream << "0.001" << std::endl;
+        stream << "0.00001" << std::endl;
     }
     stream >> _shadowRayEpsilon;
 
@@ -48,7 +48,7 @@ Scene::Scene(const std::string& filepath)
     }
     else
     {
-        stream << "0.000001" << std::endl;
+        stream << "0.0000000001" << std::endl;
     }
     stream >> _intersectionTestEpsilon;
 
@@ -196,19 +196,16 @@ Scene::Scene(const std::string& filepath)
         child = element->FirstChildElement("Faces");
         stream << child->GetText() << std::endl;
         Indices indices;
-        mesh.indicesOffset = offset;
 
         std::vector<Indices> indicesVec;
 
         while(!(stream >> indices.a).eof())
         {
             stream >> indices.b >> indices.c;
-            _meshIndexBuffer.push_back(indices);
             offset++;
             indicesVec.push_back(indices);
         }
 
-        mesh.indicesSize = offset;
         stream.clear();
 
         int localTotalNode = Utils::constructBVH(indicesVec,
@@ -284,20 +281,6 @@ Scene::~Scene()
 
 void Scene::ComputeFaceNormals()
 {
-    for(size_t i=0; i<_meshIndexBuffer.size(); i++)
-    {
-        Indices faceIndices = _meshIndexBuffer[i];
-        Vertex normalElement;
-        glm::vec3 a = _vertexData[faceIndices.a-1].pos;
-        glm::vec3 b = _vertexData[faceIndices.b-1].pos;
-        glm::vec3 c = _vertexData[faceIndices.c-1].pos;
-
-        glm::vec3 normal = glm::cross((b-a),(c-a));
-        normal = glm::normalize(normal);
-        normalElement.pos = normal;
-
-        _meshNormals.push_back(normalElement);
-    }
 
     for(size_t i=0; i<_BVHIndices.size(); i++)
     {
@@ -371,41 +354,26 @@ void Scene::BindObjectsToGPU()
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, ssbo_cameras);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-
-    // Bind indices array   
-    glGenBuffers(1, &ssbo_meshIndices);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_meshIndices);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, _meshIndexBuffer.size() * sizeof(Indices), _meshIndexBuffer.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, ssbo_meshIndices);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    // Bind mesh normals array   
-    glGenBuffers(1, &ssbo_meshNormals);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_meshNormals);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, _meshNormals.size() * sizeof(Vertex), _meshNormals.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, ssbo_meshNormals);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    // Bind mesh normals array   
+    // Bind bvh normals array   
     glGenBuffers(1, &ssbo_BVHNormals);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHNormals);
     glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHNormals.size() * sizeof(Vertex), _BVHNormals.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 12, ssbo_BVHNormals);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, ssbo_BVHNormals);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);    
 
-    // Bind mesh normals array   
+    // Bind bvh indice array   
     glGenBuffers(1, &ssbo_BVHIndices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHIndices);
     glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHIndices.size() * sizeof(Indices), _BVHIndices.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 13, ssbo_BVHIndices);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, ssbo_BVHIndices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); 
 
-    // Bind mesh normals array   
+    // Bind bvh node array   
     glGenBuffers(1, &ssbo_BVHNodes);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHNodes);
     glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHNodes.size() * sizeof(BVHNode), _BVHNodes.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 14, ssbo_BVHNodes);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);       
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 12, ssbo_BVHNodes);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);         
 
 }
 
@@ -440,7 +408,6 @@ void Scene::SetUniforms(ComputeProgram* program)
     glUniform1i(glGetUniformLocation(program->id, "materialCount"), _materials.size());
     glUniform1i(glGetUniformLocation(program->id, "vertexCount"), _vertexData.size());
     glUniform1i(glGetUniformLocation(program->id, "meshCount"), _meshes.size());
-    glUniform1i(glGetUniformLocation(program->id, "meshIndexCount"), _meshIndexBuffer.size());
     glUniform1i(glGetUniformLocation(program->id, "triangleCount"), _triangles.size());
     glUniform1i(glGetUniformLocation(program->id, "sphereCount"), _spheres.size());                    
 

@@ -42,10 +42,7 @@ public:
     GLuint ssbo_meshes;
     GLuint ssbo_triangles;
     GLuint ssbo_spheres;
-    GLuint ssbo_meshIndexBuffer;
     GLuint ssbo_cameras;
-    GLuint ssbo_meshIndices;
-    GLuint ssbo_meshNormals;
       
     GLuint ssbo_BVHNormals;
     GLuint ssbo_BVHIndices;
@@ -58,18 +55,11 @@ public:
     std::vector<Triangle>   _triangles;
     std::vector<Sphere>     _spheres;
     std::vector<Camera>    _cameras;
-    std::vector<Vertex> _meshNormals;
 
     std::vector<Indices> _BVHIndices;
     std::vector<BVHNode> _BVHNodes;
-    std::vector<Vertex> _BVHNormals;    
+    std::vector<Vertex> _BVHNormals;
 
-
-    // all indices of all meshes in the scene are
-    // recorded in this buffer and sent to gpu as one buffer
-    // in meshes, we will have offsets and sizes for picking up
-    // their corresponding indices
-    std::vector<Indices>    _meshIndexBuffer;
 
     glm::vec3               _backgroundColor;
     glm::vec3               _ambientLight;

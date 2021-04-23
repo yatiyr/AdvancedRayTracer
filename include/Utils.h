@@ -478,7 +478,7 @@ public:
     {
         BVHNode node;
         node.aabb = computeAABB(indices, vertexData);
-        if(depth == maxDepth || indices.size() <= 32)
+        if(depth == maxDepth || indices.size() <= 256)
         {
             for(size_t i=0; i<indices.size(); i++)
             {
@@ -497,7 +497,7 @@ public:
             return 1;
         }
 
-        SplittedIndices si = splitSAH(indices, vertexData, axis);
+        SplittedIndices si = splitMidpoint(indices, vertexData, axis);
         
         node.indicesSize = 0;
         node.indicesOffset = 0;

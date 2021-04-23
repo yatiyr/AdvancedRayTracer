@@ -1,7 +1,7 @@
 #version 460
 #pragma optionNV (unroll all)
 
-layout (local_size_x = 1, local_size_y = 1) in;
+layout (local_size_x = 64) in;
 layout (rgba32f, binding = 0) uniform image2D imgOutput;
 
 // ------------------------ STRUCTS ----------------------------- //
@@ -41,8 +41,6 @@ struct Triangle
 struct Mesh
 {
 	int materialId;
-	int indicesOffset;
-	int indicesSize;
 	int rootBVHNode;
 	int rootOffset;
 	int nodeSize;
@@ -131,7 +129,6 @@ uniform int lightCount;
 uniform int materialCount;
 uniform int vertexCount;
 uniform int meshCount;
-uniform int meshIndexCount;
 uniform int triangleCount;
 uniform int sphereCount;
 
@@ -174,27 +171,17 @@ layout(std430, binding=9) buffer cmrs
 	Camera cameras[];
 };
 
-layout(std430, binding=10) buffer mshIndices
-{
-	Indices meshIndexBuffer[];
-};
-
-layout(std430, binding=11) buffer mshNormals
-{
-	Vertex meshNormals[];
-};
-
-layout(std430, binding=12) buffer bvhNormals
+layout(std430, binding=10) buffer bvhNormals
 {
 	Vertex BVHNormals[];
 };
 
-layout(std430, binding=13) buffer bvhIndices
+layout(std430, binding=11) buffer bvhIndices
 {
 	Indices BVHIndices[];
 };
 
-layout(std430, binding=14) buffer bvhNodes
+layout(std430, binding=12) buffer bvhNodes
 {
 	BVHNode BVHNodes[];
 };
@@ -479,7 +466,7 @@ IntersectionReport intersectFace(in Ray r, in Indices indices, float tmin, float
 
 IntersectionReport intersectTriangle(Ray r, Triangle triangle)
 {
-	IntersectionReport report = MollerTrumboreIntersection(r, triangle.indices, tmin, tmax);
+	IntersectionReport report = intersectFace(r, triangle.indices, tmin, tmax);
 	report.materialId = triangle.materialId;
 
 	vec3 a = vertexData[triangle.indices.a-1].pos;
@@ -490,45 +477,6 @@ IntersectionReport intersectTriangle(Ray r, Triangle triangle)
 
 
 	return report;
-}
-
-IntersectionReport intersectMesh(Ray r, Mesh mesh)
-{
-	float tMin = FLT_MAX;
-
-	IntersectionReport report;
-	report.intersection = vec3(FLT_MAX);
-	report.d = tMin;	
-	report.materialId = mesh.materialId;
-
-	bool aabbIntersect = optIntersectBox(r, BVHNodes[mesh.rootBVHNode].aabb, tmin, tmax);
-
-	if(aabbIntersect == true)
-	{
-		report.dbg = 0;
-		for(uint i= mesh.indicesOffset; i<mesh.indicesSize; i++)
-		{
-			IntersectionReport rprt = intersectFace(r, meshIndexBuffer[i], tmin, tmax);
-
-			if(rprt.d < tMin)
-			{
-				report.intersection = rprt.intersection;
-				report.normal = meshNormals[i].pos;
-				report.d = rprt.d;
-				tMin = report.d;
-			}
-		}
-	}
-
-	else if(aabbIntersect == false)
-	{
-		report.dbg = 1;
-		report.d = 1000;
-	}
-
-
-
-	return report;	
 }
 
 IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
@@ -568,7 +516,7 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 
 			for(int j = offset; j < offsetSize; j++)
 			{
-				IntersectionReport rprt = MollerTrumboreIntersection(r, BVHIndices[j], tmin, tmax);				
+				IntersectionReport rprt = intersectFace(r, BVHIndices[j], tmin, tmax);				
 				if(rprt.d < tMin)
 				{
 					report.intersection = rprt.intersection;
@@ -578,6 +526,7 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 				}				
 			}
 		}
+		
 	}
 
 

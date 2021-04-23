@@ -56,8 +56,6 @@ struct Triangle
 struct Mesh
 {
     int materialId;
-    int indicesOffset;
-    int indicesSize;
     int rootBVHNode;
     int rootOffset;
     int nodeSize;
