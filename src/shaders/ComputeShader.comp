@@ -17,7 +17,14 @@ struct Material
 	vec3 diffuseReflectance;
 	vec3 specularReflectance;
 	vec3 mirrorReflectance;
+	vec3 absorptionCoefficient;
 	float phongExponent;
+
+	int type; // 0: normal 1: mirror 2: dielectric 3: conductor
+	float refractionIndex;
+	float absorptionIndex;
+
+	
 };
 
 struct Vertex

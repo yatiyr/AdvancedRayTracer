@@ -31,7 +31,11 @@ struct Material
     alignas(16) glm::vec3 diffuseReflectance;
     alignas(16) glm::vec3 specularReflectance;
     alignas(16) glm::vec3 mirrorReflectance;
+    alignas(16) glm::vec3 absorptionCoefficient;
     float phongExponent;
+    int type; // 0: normal 1: mirror 2: dielectric 3: conductor
+    float refractionIndex;
+    float absorptionIndex;
 };
 
 struct Vertex

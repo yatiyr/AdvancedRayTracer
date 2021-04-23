@@ -37,7 +37,7 @@ Scene::Scene(const std::string& filepath)
     }
     else
     {
-        stream << "0.00001" << std::endl;
+        stream << "0.0001" << std::endl;
     }
     stream >> _shadowRayEpsilon;
 
@@ -48,7 +48,7 @@ Scene::Scene(const std::string& filepath)
     }
     else
     {
-        stream << "0.0000000001" << std::endl;
+        stream << "0.0000001" << std::endl;
     }
     stream >> _intersectionTestEpsilon;
 
@@ -136,14 +136,54 @@ Scene::Scene(const std::string& filepath)
     Material material;
     while(element)
     {
+     
         child = element->FirstChildElement("AmbientReflectance");
         stream << child->GetText() << std::endl;
         child = element->FirstChildElement("DiffuseReflectance");
         stream << child->GetText() << std::endl;
         child = element->FirstChildElement("SpecularReflectance");
         stream << child->GetText() << std::endl;
-        //child = element->FirstChildElement("MirrorReflectance");
-        //stream << child->GetText() << std::endl;
+
+        child = element->FirstChildElement("MirrorReflectance");
+        if(child)
+        {
+            stream << child->GetText() << std::endl;
+        }
+        else
+        {
+            stream << "0 0 0" << std::endl;
+        }
+
+        child = element->FirstChildElement("AbsorptionCoefficient");
+        if(child)
+        {
+            stream << child->GetText() << std::endl;
+        }
+        else
+        {
+            stream << "0 0 0" << std::endl;
+        }
+
+        child = element->FirstChildElement("RefractionIndex");
+        if(child)
+        {
+            stream << child->GetText() << std::endl;
+        }
+        else
+        {
+            stream << "0" << std::endl;
+        }
+
+        child = element->FirstChildElement("AbsorptionIndex");
+        if(child)
+        {
+            stream << child->GetText() << std::endl;
+        }
+        else
+        {
+            stream << "0" << std::endl;
+        }
+        
         child = element->FirstChildElement("PhongExponent");
         if(child)
         {
@@ -154,12 +194,33 @@ Scene::Scene(const std::string& filepath)
             stream << "1" << std::endl;
         }
 
-
         stream >> material.ambientReflectance.x >> material.ambientReflectance.y >> material.ambientReflectance.z;
         stream >> material.diffuseReflectance.x >> material.diffuseReflectance.y >> material.diffuseReflectance.z;
         stream >> material.specularReflectance.x >> material.specularReflectance.y >> material.specularReflectance.z;
-        //stream >> material.mirrorReflectance.x >> material.mirrorReflectance.y >> material.mirrorReflectance.z;
+        stream >> material.mirrorReflectance.x >> material.mirrorReflectance.y >> material.mirrorReflectance.z;
+        stream >> material.absorptionCoefficient.x >> material.absorptionCoefficient.y >> material.absorptionCoefficient.z;
+        stream >> material.refractionIndex;
+        stream >> material.absorptionIndex;
         stream >> material.phongExponent;
+
+        material.type = -1;
+
+        if(element->Attribute("type"))
+        {
+            const char* type = element->Attribute("type");
+            if(strcmp(type, "conductor") == 0)
+            {
+                material.type = 2;
+            }
+            else if(strcmp(type, "dielectric") == 0)
+            {
+                material.type = 1;
+            }
+            else if(strcmp(type, "mirror") == 0)
+            {
+                material.type = 0;
+            }
+        }
 
         _materials.push_back(material);
         element = element->NextSiblingElement("Material");
