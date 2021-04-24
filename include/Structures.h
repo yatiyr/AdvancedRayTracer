@@ -73,6 +73,13 @@ struct Sphere
     float radius;
 };
 
+struct Ray
+{
+    alignas(16) glm::vec3 origin;
+    alignas(16) glm::vec3 direction;
+    alignas(16) glm::vec3 rcp;
+};
+
 
 struct VertexIndex
 {
@@ -133,6 +140,23 @@ struct BVHNode
     int indicesOffset;
     int indicesSize;
     int childSize;
+};
+
+struct IntersectionReport
+{
+    alignas(16) glm::vec3 intersection;
+    alignas(16) glm::vec3 normal;
+    float d;
+    int materialId;
+
+    float dbg;
+};
+
+struct BoxReport
+{
+    bool id;
+    alignas(16) glm::vec3 point;
+    int dbg;
 };
 
 

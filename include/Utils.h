@@ -478,7 +478,7 @@ public:
     {
         BVHNode node;
         node.aabb = computeAABB(indices, vertexData);
-        if(depth == maxDepth || indices.size() <= 256)
+        if(depth == maxDepth || indices.size() <= 8)
         {
             for(size_t i=0; i<indices.size(); i++)
             {

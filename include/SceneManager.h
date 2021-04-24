@@ -24,10 +24,12 @@ public:
 
     void AddScene(const std::string& path);
     void LoadScene(int index, ComputeProgram* program);
+    void LoadSceneForCPU(int index);
     void ExitScene(int index);
 
     Scene& GetActiveScene();
     Scene& GetScene(int index);
+    Scene* GetScenePointer(int index);
 };
 
 

@@ -6,11 +6,11 @@
 int main(int argc, char** argv)
 {
 
-    Renderer RnDr("assets/scenes/hw2/scienceTree.xml", RenderingMode::OFFSCREEN_RENDERING_BIT);
+    Renderer RnDr("assets/scenes/hw1/simple.xml", RenderingMode::CPU_RENDERING_BIT);
 
     try
     {    
-        RnDr.OneTimeRender();
+        RnDr.CPURender();
     }
     catch(const std::exception& e)
     {

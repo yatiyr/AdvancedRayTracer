@@ -1,7 +1,7 @@
 #version 460
-#pragma optionNV (unroll all)
+//#pragma optionNV (unroll all)
 
-layout (local_size_x = 64) in;
+layout (local_size_x = 32) in;
 layout (rgba32f, binding = 0) uniform image2D imgOutput;
 
 // ------------------------ STRUCTS ----------------------------- //
@@ -119,6 +119,14 @@ struct BVHNode
 	int childSize;
 };
 
+struct RayIntersection
+{
+	Ray r;
+	IntersectionReport rprt;
+	vec3 coeff;
+	int depth;
+};
+
 // -------------------------------------------------------------- //
 #define FLT_MAX 3.402823466e+38
 #define FLT_MIN 1.175494351e-38
@@ -198,7 +206,8 @@ layout(std430, binding=12) buffer bvhNodes
 // ------------------------- DEFINITIONS ------------------------ //
 
 #define MAX_RECURSION_DEPTH 200
-
+#define E  2.718281828459
+#define PI  3.14159265359
 // -------------------------------------------------------------- //
 
 // -------------------------- GLOBALS --------------------------- //
@@ -214,7 +223,13 @@ float tmin = 0;
 float tmax = 1000;
 float yes = 0;
 BVHNode nodeStack[MAX_RECURSION_DEPTH];
-Ray     rayStack[MAX_RECURSION_DEPTH];
+vec3   coeffStack[MAX_RECURSION_DEPTH];
+
+RayIntersection bouncedRayIntersection[MAX_RECURSION_DEPTH];
+
+RayIntersection rayPool[MAX_RECURSION_DEPTH];
+
+float dbg = 0;
 // -------------------------------------------------------------- //
 
 
@@ -497,8 +512,9 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 	report.materialId = mesh.materialId;
 
 	int nodeIndexNext = mesh.rootOffset;
+	int size = mesh.rootOffset + mesh.nodeSize;
 
-	for(int nodeIndex = mesh.rootOffset; nodeIndex < mesh.rootOffset + mesh.nodeSize; nodeIndex ++)
+	for(int nodeIndex = mesh.rootOffset; nodeIndex < size; nodeIndex ++)
 	{
 		if(nodeIndex != nodeIndexNext)
 			continue;
@@ -509,18 +525,16 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 		if(nodeIntersection == true)
 		{
 			nodeIndexNext += 1;
-
 		}
 		else
 		{
-			nodeIndexNext += BVHNodes[nodeIndex].childSize;
+			nodeIndexNext += BVHNodes[nodeIndex].childSize;	
 		}
 
 		if(nodeIntersection == true && isLeaf)
 		{
 			int offset       = BVHNodes[nodeIndex].indicesOffset;
 			int offsetSize   = offset +  BVHNodes[nodeIndex].indicesSize;
-
 			for(int j = offset; j < offsetSize; j++)
 			{
 				IntersectionReport rprt = intersectFace(r, BVHIndices[j], tmin, tmax);				
@@ -529,12 +543,14 @@ IntersectionReport optIntersectBVH(Ray r, Mesh mesh)
 					report.intersection = rprt.intersection;
 					report.normal = BVHNormals[j].pos;
 					report.d = rprt.d;
-					tMin = report.d;
-				}				
-			}
-		}
+					tMin = report.d;				
+				}		
+			}			
+			nodeIndexNext += 1;
+			nodeIndexNext -= 1;
+		} 
 		
-	}
+	} 
 
 
 	return report;
@@ -739,7 +755,197 @@ bool shadowTest(IntersectionReport report, PointLight light)
 
 }
 
-vec3 computeFinalColor(IntersectionReport report, Ray primaryRay)
+vec3 computeMirrored(Ray r, vec3 primaryMirrorReflectance)
+{
+
+	IntersectionReport report = testWorldIntersection(r);
+	vec3 reflectanceCoeff = primaryMirrorReflectance;
+	vec3 result = computeAmbientComponent(report);
+	for(uint i=0; i<lightCount; i++)
+	{
+		if(shadowTest(report, pointLights[i]))
+		{
+			continue;
+		}
+		else
+		{
+			result += computeDiffuseComponent(report, pointLights[i]) +
+			          computeSpecularComponent(report, r, pointLights[i]);
+		}
+	}
+
+	result *= primaryMirrorReflectance;
+
+	for(uint i=1; i<MAX_RECURSION_DEPTH; i++)
+	{
+		
+	}
+
+	return result;
+}
+
+vec3 computeRecursive(IntersectionReport report, Ray r)
+{
+	vec3 result = vec3(0.0, 0.0, 0.0);
+
+	IntersectionReport currentReport = report;
+
+	int intersectionStackPointer = 0;
+
+	int rayPoolPointer = 0;
+
+
+	if(materials[report.materialId - 1].type == 0)
+	{
+
+		Ray mirrored;
+		mirrored.origin = report.intersection + shadowRayEpsilon*report.normal;
+		mirrored.direction = reflect(r.direction, report.normal);
+
+		IntersectionReport rprt = testWorldIntersection(mirrored);
+	
+		if(rprt.d != FLT_MAX)
+		{
+			
+			bouncedRayIntersection[intersectionStackPointer].rprt  = rprt;
+			bouncedRayIntersection[intersectionStackPointer].r     = mirrored;
+			bouncedRayIntersection[intersectionStackPointer].coeff = materials[currentReport.materialId - 1].mirrorReflectance;
+			rayPool[rayPoolPointer].rprt = rprt;
+			rayPool[rayPoolPointer].r = mirrored;
+			rayPool[rayPoolPointer].coeff = materials[currentReport.materialId - 1].mirrorReflectance;
+			rayPool[rayPoolPointer].depth = 1;
+
+			intersectionStackPointer++;
+			rayPoolPointer++;
+		}
+	
+	}
+	else if(materials[report.materialId - 1].type == 1)
+	{
+		// calculate reflected and refracted
+	}
+	else if(materials[report.materialId - 1].type == 2)
+	{
+		// calculate reflected and refracted
+	}
+	else
+	{
+		// nothing happens
+	}
+
+
+	while(intersectionStackPointer > 0)
+	{
+
+		RayIntersection currIntersection = bouncedRayIntersection[intersectionStackPointer - 1];
+
+		
+		vec3 res = computeAmbientComponent(currIntersection.rprt);
+
+		for(uint i=0; i<lightCount; i++)
+		{
+			if(shadowTest(currIntersection.rprt, pointLights[i]))
+			{
+				continue;
+			}
+			else
+			{
+				res += computeDiffuseComponent(currIntersection.rprt, pointLights[i]) +
+			          computeSpecularComponent(currIntersection.rprt, currIntersection.r, pointLights[i]);
+			}
+		}
+
+		res *= currIntersection.coeff;
+		result += res;
+		
+
+		intersectionStackPointer--;
+
+		if(currIntersection.depth < 6)
+		{
+			if(materials[currIntersection.rprt.materialId - 1].type == 0)
+			{
+				Ray mirrored;
+				mirrored.origin = report.intersection + shadowRayEpsilon*report.normal;
+				mirrored.direction = reflect(r.direction, report.normal);
+
+				IntersectionReport rprt = testWorldIntersection(mirrored);
+
+				if(rprt.d != FLT_MAX)
+				{
+					RayIntersection intersection;
+					intersection.rprt = rprt;
+					intersection.r = mirrored;
+					intersection.coeff = currIntersection.coeff * materials[rprt.materialId - 1].mirrorReflectance;
+
+					bouncedRayIntersection[intersectionStackPointer] = intersection;
+					intersectionStackPointer++;
+				}
+			}
+			else if(materials[currIntersection.rprt.materialId - 1].type == 1)
+			{
+				Ray reflected;
+				reflected.origin = report.intersection + shadowRayEpsilon*report.normal;
+				reflected.direction = reflect(r.direction, report.normal);
+
+				IntersectionReport rprt1 = testWorldIntersection(reflected);
+
+				if(rprt1.d != FLT_MAX)
+				{
+					RayIntersection intersection;
+					intersection.rprt = rprt1;
+					intersection.r = reflected;
+					intersection.coeff = currIntersection.coeff * materials[rprt1.materialId - 1].mirrorReflectance;
+
+					bouncedRayIntersection[intersectionStackPointer] = intersection;
+					intersectionStackPointer++;
+				}
+
+				Ray refractedEntering;
+				refractedEntering.origin = report.intersection - shadowRayEpsilon*report.normal;
+				refractedEntering.direction = refract(r.direction, report.normal, 1.0/materials[rprt1.materialId - 1].refractionIndex);
+
+				float cosalpha = dot(rprt1.normal, reflected.direction);
+				float cosphi   = dot(rprt1.normal, -refractedEntering.direction);
+
+				float r1 = (materials[rprt1.materialId - 1].refractionIndex*cosalpha - 1.0*cosphi)/
+				           (materials[rprt1.materialId - 1].refractionIndex*cosalpha + 1.0*cosphi);
+
+				float r2 = (1.0*cosalpha - materials[rprt1.materialId - 1].refractionIndex*cosphi)/
+				           (1.0*cosalpha + materials[rprt1.materialId - 1].refractionIndex*cosphi);
+
+				float refRat = (r1*r1 + r2*r2)/2;
+				float transRat = 1 - refRat;
+
+
+				IntersectionReport rprt2 = testWorldIntersection(refractedEntering);
+
+				Ray refractedExiting;
+				refractedExiting.origin = rprt2.intersection + shadowRayEpsilon * rprt2.normal;
+				refractedExiting.direction = refract(refractedEntering.direction, -rprt2.normal, materials[rprt1.materialId - 1].refractionIndex/1.0);
+
+
+
+				
+			}
+			else if(materials[currIntersection.rprt.materialId - 1].type == 2)
+			{
+				// calculate reflected and refracted
+			}
+			else
+			{
+				// nothing happens
+			} 	
+		}
+	
+	}
+
+
+
+	return result;
+}
+
+vec3 computeAmbientDiffuseSpecular(IntersectionReport report, Ray primaryRay)
 {
 	vec3 result = computeAmbientComponent(report);
 
@@ -755,6 +961,23 @@ vec3 computeFinalColor(IntersectionReport report, Ray primaryRay)
 			          computeSpecularComponent(report, primaryRay, pointLights[i]);
 		}
 	}
+
+	//if(materials[report.materialId - 1].type != -1)
+	//	result += computeRecursive(report, primaryRay);
+
+	/*
+	// If recursion is larger than 0
+	if(MAX_RECURSION_DEPTH > 0)
+	{
+		if(materials[report.materialId - 1].type == 0)
+		{
+			Ray mirrored;
+			mirrored.origin = report.intersection + shadowRayEpsilon*report.normal;
+			mirrored.direction = reflect(primaryRay.direction, report.normal);
+			result += computeMirrored(mirrored, materials[report.materialId - 1].mirrorReflectance);
+		}
+
+	} */
 
 	return clamp(result, vec3(0.0), vec3(1.0));
 }
@@ -777,7 +1000,7 @@ void main()
 
 	if(report.d != FLT_MAX)
 	{
-		pixel = vec4(computeFinalColor(report, primaryRay), 1.0);
+		pixel = vec4(computeAmbientDiffuseSpecular(report, primaryRay), 1.0);
 
 	}
 	else
@@ -785,25 +1008,14 @@ void main()
 		pixel = vec4(backgroundColor, 1.0);
 	}
 
-	//if(true)
-	//{
-	//	vec3 pixel3 = clamp(vec3(1.0 , 1.0 , 1.0) * report.dbg, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0));
-	//	pixel = vec4(pixel3, 1.0);
-	//}	
+	/** FOR DEBUGGING
 	if(pixelCoords.x == 0 && pixelCoords.y == size.y - 1)
 	{
 
+		pixel = vec4(1, BVHNodes[2].leftNode, BVHNodes[0].aabb.zmin, 1.0);
 
-
-		pixel = vec4(yes, BVHNodes[2].leftNode, BVHNodes[0].aabb.zmin, 1.0);
-
-	}
+	} */
 	
-
-	//
-	// TODO: IMPLEMENT HERE
-	//
-
 	// output to a specific pixel in the image
 	imageStore(imgOutput, ivec2(pixelCoords.x, size.y - pixelCoords.y -1), pixel);
 }

@@ -26,6 +26,11 @@ void SceneManager::LoadScene(int index, ComputeProgram* program)
     
 }
 
+void SceneManager::LoadSceneForCPU(int index)
+{
+    _scenes[index].ComputeFaceNormals();
+}
+
 void SceneManager::ExitScene(int index)
 {
 
@@ -36,6 +41,12 @@ Scene& SceneManager::GetScene(int index)
 {
     return _scenes[index];
 }
+
+Scene* SceneManager::GetScenePointer(int index)
+{
+    return &_scenes[index];
+}
+
 
 Scene& SceneManager::GetActiveScene()
 {

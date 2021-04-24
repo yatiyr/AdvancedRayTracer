@@ -23,6 +23,11 @@
 #include <SceneManager.h>
 #include <vector>
 
+#include <thread>
+#include <CPURaytracer.h>
+
+
+
 
 enum RenderingMode
 {
@@ -31,11 +36,21 @@ enum RenderingMode
     OFFSCREEN_RENDERING_BIT = 0x00002,
 };
 
+struct WorkGroup
+{
+    int start;
+    int end;
+};
+
 // Base renderer class
 class Renderer
 {
 private:
 
+
+    float* _pixels;
+    Scene* _scenePtr;
+    std::vector<WorkGroup> _workGroups;
 
     // 
     RenderingMode renderMode;
@@ -93,8 +108,15 @@ private:
 
     void GetMaximumWorkGroupSize();
 
-    uint8_t* FloatToUint8(float* pixels);
+    static void WritePixelCoord(float* pixels, int i, int j, glm::vec3, int width);
 
+    uint8_t* FloatToUint8(float* pixels, int width, int height);
+
+    static glm::vec2 GiveCoords(int index, int height, int width);
+
+    static void ProcessWorkGroup(float* pixels, WorkGroup wg, int height, int width, Scene* scenePtr);
+
+    void ClearImage();
 
 
 
@@ -109,7 +131,9 @@ public:
 
     void RenderLoop();
 
-    void OneTimeRender();    
+    void OneTimeRender();
+
+    void CPURender();
 
     static void InitializeGL(int height, int width, RenderingMode mode);
 

@@ -418,23 +418,25 @@ void Scene::BindObjectsToGPU()
     // Bind bvh normals array   
     glGenBuffers(1, &ssbo_BVHNormals);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHNormals);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHNormals.size() * sizeof(Vertex), _BVHNormals.data(), GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHNormals.size() * sizeof(Vertex), _BVHNormals.data(), GL_STATIC_READ);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, ssbo_BVHNormals);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);    
 
     // Bind bvh indice array   
     glGenBuffers(1, &ssbo_BVHIndices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHIndices);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHIndices.size() * sizeof(Indices), _BVHIndices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHIndices.size() * sizeof(Indices), _BVHIndices.data(), GL_STATIC_READ);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, ssbo_BVHIndices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); 
 
     // Bind bvh node array   
     glGenBuffers(1, &ssbo_BVHNodes);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_BVHNodes);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, _BVHNodes.size() * sizeof(BVHNode), _BVHNodes.data(), GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER,_BVHNodes.size() * sizeof(BVHNode), _BVHNodes.data(), GL_STATIC_READ);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 12, ssbo_BVHNodes);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);         
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    std::cout << "node size: " << _BVHNodes.size() * sizeof(BVHNode) << " bytes.\n";
 
 }
 

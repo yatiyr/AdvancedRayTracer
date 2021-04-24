@@ -89,49 +89,56 @@ void Renderer::InitializeGL(int width, int height, RenderingMode mode)
 // For now this constructor will be used for demonstration
 Renderer::Renderer(const char* file, RenderingMode mode)
 {
-    _sceneManager.AddScene(std::string(ROOT_DIR) + std::string(file));
-
-    _width = _sceneManager.GetScene(0)._activeCamera.imageResolution.x;
-    _height = _sceneManager.GetScene(0)._activeCamera.imageResolution.y;
-
-    InitializeGL(_width, _height, mode);
-
-    _window = glfwCreateWindow(_width, _height, "AdvancedRayTracer", nullptr, nullptr);    
-    if(_window == nullptr)
+    if(mode & RenderingMode::CPU_RENDERING_BIT)
     {
-        glfwTerminate();
-        throw std::runtime_error("Could not create glfw window.");
-
+        _sceneManager.AddScene(std::string(ROOT_DIR) + std::string(file));
     }
+    else
+    {
+        _sceneManager.AddScene(std::string(ROOT_DIR) + std::string(file));
 
-    // Change contex to our window class variable
-    glfwMakeContextCurrent(_window);
-    
+        _width = _sceneManager.GetScene(0)._activeCamera.imageResolution.x;
+        _height = _sceneManager.GetScene(0)._activeCamera.imageResolution.y;
 
-    // Register callbacks
-    glfwSetFramebufferSizeCallback(_window, Framebuffer_Size_Callback);
-    glfwSetCursorPosCallback(_window, Mouse_Callback);
-    glfwSetScrollCallback(_window, Scroll_Callback);
+        InitializeGL(_width, _height, mode);
 
-    
-    // if we want to disable mouse
-    // glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        _window = glfwCreateWindow(_width, _height, "AdvancedRayTracer", nullptr, nullptr);    
+        if(_window == nullptr)
+        {
+            glfwTerminate();
+            throw std::runtime_error("Could not create glfw window.");
 
-    LoadFunctionPointers();
+        }
 
-    GenerateTexture();
+        // Change contex to our window class variable
+        glfwMakeContextCurrent(_window);
+        
+
+        // Register callbacks
+        glfwSetFramebufferSizeCallback(_window, Framebuffer_Size_Callback);
+        glfwSetCursorPosCallback(_window, Mouse_Callback);
+        glfwSetScrollCallback(_window, Scroll_Callback);
+
+        
+        // if we want to disable mouse
+        // glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+        LoadFunctionPointers();
+
+        GenerateTexture();
 
 
-    glViewport(0, 0, _width, _height);
+        glViewport(0, 0, _width, _height);
 
-    // read load compile and link shader programs
-    InitializeShaderPrograms();
+        // read load compile and link shader programs
+        InitializeShaderPrograms();
 
 
-    //PrintDeviceProperties();
-    //FindComputeShaderExtension();
-    //GetMaximumWorkGroupCount();
-    //GetMaximumWorkGroupSize();
+        //PrintDeviceProperties();
+        //FindComputeShaderExtension();
+        //GetMaximumWorkGroupCount();
+        //GetMaximumWorkGroupSize();
+    }
 
 }
 
@@ -289,16 +296,16 @@ void Renderer::DrawImage()
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
-uint8_t* Renderer::FloatToUint8(float* pixels)
+uint8_t* Renderer::FloatToUint8(float* pixels, int width, int height)
 {
     // we will omit alpha channel
-    uint8_t* res = new uint8_t[_width * _height * 3];
+    uint8_t* res = new uint8_t[width * height * 3];
 
     int indexSrc = 0;
     int indexDst = 0;
-    for(int j= 0; j<_height; j++)
+    for(int j= 0; j<width; j++)
     {
-        for(int i=0; i<_width; i++)
+        for(int i=0; i<height; i++)
         {
             float r = pixels[indexSrc++];
             float g = pixels[indexSrc++];
@@ -340,7 +347,7 @@ void Renderer::OneTimeRender()
         pixels = (float *)malloc(_width*_height* 4 * sizeof(float));        
         glReadPixels(0, 0, _width, _height, GL_RGBA, GL_FLOAT, pixels); 
 
-        result = FloatToUint8(pixels);
+        result = FloatToUint8(pixels, _width, _height);
 
         stbi_flip_vertically_on_write(true);
         std::string outputPath = "outputs/" + _sceneManager.GetScene(0)._imageName;
@@ -354,10 +361,123 @@ void Renderer::OneTimeRender()
     
 }
 
+void Renderer::WritePixelCoord(float* pixels, int i, int j, glm::vec3 color, int width)
+{
+    pixels[j* 4 + (width * i *4)] = color.x;
+    pixels[j * 4 + (width * i *4) + 1] = color.y;
+    pixels[j * 4 + (width * i *4) + 2] = color.z;
+    pixels[j * 4 + (width * i *4) + 3] = 1.0f;
+}
+
+void Renderer::ClearImage()
+{
+    for(size_t i=0; i<_height; i++)
+    {
+        for(size_t j=0; j<_width; j++)
+        {
+            _pixels[j* 4 + (_width * i *4)] = 0.0;
+            _pixels[j * 4 + (_width * i *4) + 1] = 0.0;
+            _pixels[j * 4 + (_width * i *4) + 2] = 0.0;
+            _pixels[j * 4 + (_width * i *4) + 3] = 1.0f;            
+        }
+    }
+}
+
+
+glm::vec2 Renderer::GiveCoords(int index, int height, int width)
+{
+    glm::vec2 result;
+
+    int i = index/width;
+    int j = index%width;
+
+    result.x = i;
+    result.y = j;
+
+    return result;
+}
+
+void Renderer::ProcessWorkGroup(float* pixels, WorkGroup wg, int height, int width, Scene* scenePtr)
+{
+    for(int i=wg.start; i<=wg.end; i++)
+    {
+        glm::vec2 coords = GiveCoords(i, height, width);
+        Ray pR = ComputePrimaryRay(coords.x, coords.y, scenePtr->_cameras[0]);
+        glm::vec3 pixel = RayTrace(pR, scenePtr);
+        WritePixelCoord(pixels, coords.x, coords.y, pixel, width);
+    }
+}
+
+void Renderer::CPURender()
+{
+    uint8_t *result;
+
+    _sceneManager.LoadSceneForCPU(0);
+
+    _scenePtr = _sceneManager.GetScenePointer(0);
+
+    _width = _scenePtr->_cameras[0].imageResolution.x;
+    _height = _scenePtr->_cameras[0].imageResolution.y;
+
+    _pixels = (float *)malloc(_width*_height*4*sizeof(float));
+    ClearImage();
+
+    int totalSize = _width*_height;
+    int workGroupSize = 32;
+
+    int chunkSize = totalSize/workGroupSize;
+
+    for(int i=0; i<workGroupSize; i++)
+    {
+        int start;
+        int end;
+
+        start = i * chunkSize;
+        if(i == workGroupSize - 1)
+            end = (i+1) * chunkSize - 1 + (totalSize%chunkSize);
+        else
+            end = (i+1) * chunkSize - 1;
+
+        WorkGroup wg;
+        wg.start = start;
+        wg.end   = end;
+
+        _workGroups.push_back(wg);
+
+        if(i != 3 && i != 6)
+        {
+            //std::thread t(ProcessWorkGroup, _pixels, wg, _height, _width);
+            //t.join();
+        }
+    }
+
+    {
+        Timer t;
+        for(int i=0; i<workGroupSize; i++)
+        {
+            std::thread t(ProcessWorkGroup, _pixels, _workGroups[i], _height, _width, _scenePtr);
+            t.join();
+        }
+        std::cout << "Image rendered in --->";
+    }
+
+    //ProcessWorkGroup(_workGroups[workGroupSize-1]);
+
+    result = FloatToUint8(_pixels, _width, _height);
+
+    //stbi_flip_vertically_on_write(true);
+    std::string outputPath = "outputs/cpu/" + _scenePtr->_imageName;
+    stbi_write_png(outputPath.c_str(),_width, _height, 3, result, _width * 3);     
+
+    free(_pixels);
+    delete[] result;
+
+}
+
 Renderer::~Renderer()
 {
 
-    delete _renderProgram;
-    delete _computeProgram;
+    //delete _renderProgram;
+    //delete _computeProgram;
 
 }
